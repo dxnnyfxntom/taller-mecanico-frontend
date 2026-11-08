@@ -1,0 +1,306 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <h1 class="page-title">Reportes</h1>
+      <p class="page-subtitle">Historial por placa, recordatorios y productividad del equipo.</p>
+    </div>
+  </header>
+
+  <nav class="pestanas" aria-label="Secciones de reportes">
+    <button
+      type="button"
+      class="pestana"
+      [class.activa]="pestana() === 'historial'"
+      (click)="cambiarPestana('historial')"
+    >
+      Historial por placa
+    </button>
+    <button
+      type="button"
+      class="pestana"
+      [class.activa]="pestana() === 'recordatorios'"
+      (click)="cambiarPestana('recordatorios')"
+    >
+      Recordatorios
+    </button>
+    <button
+      type="button"
+      class="pestana"
+      [class.activa]="pestana() === 'productividad'"
+      (click)="cambiarPestana('productividad')"
+    >
+      Productividad
+    </button>
+  </nav>
+
+  @if (pestana() === 'historial') {
+    <section class="card">
+      <header class="card-header">
+        <h2 class="card-title">Historial de servicios por placa</h2>
+      </header>
+
+      <div class="card-body">
+        <form [formGroup]="formulario" (ngSubmit)="buscarHistorial()" class="buscador" novalidate>
+          <div class="field">
+            <label for="placa">Placa del vehiculo</label>
+            <input
+              id="placa"
+              class="input"
+              formControlName="placa"
+              maxlength="10"
+              placeholder="Ej. V12146"
+            />
+            @if (formulario.controls.placa.touched && formulario.controls.placa.invalid) {
+              <p class="field-error">Ingrese una placa valida.</p>
+            }
+          </div>
+          <button class="btn btn-primary" type="submit" [disabled]="buscando()">
+            @if (buscando()) {
+              <span class="spinner"></span>
+            }
+            Buscar historial
+          </button>
+        </form>
+      </div>
+    </section>
+
+    @if (errorHistorial()) {
+      <div class="alert alert-error">{{ errorHistorial() }}</div>
+    }
+
+    @if (buscando()) {
+      <div class="card cargando">
+        <span class="spinner spinner--oscuro"></span>
+        Consultando historial...
+      </div>
+    } @else if (historial(); as h) {
+      <section class="grid-2">
+        <article class="card">
+          <header class="card-header">
+            <h2 class="card-title">Cliente</h2>
+          </header>
+          <div class="card-body datos">
+            <div><span class="muted">Nombre</span><strong>{{ h.cliente?.nombreCompleto }}</strong></div>
+            <div><span class="muted">DNI / RUC</span><strong class="mono">{{ h.cliente?.dniRuc }}</strong></div>
+            <div><span class="muted">WhatsApp</span><strong>{{ h.cliente?.telefonoWhatsapp }}</strong></div>
+            <div><span class="muted">Correo</span><strong>{{ h.cliente?.correo || '—' }}</strong></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <header class="card-header">
+            <h2 class="card-title">Vehiculo</h2>
+          </header>
+          <div class="card-body datos">
+            <div><span class="muted">Placa</span><strong class="mono">{{ h.vehiculo?.placa }}</strong></div>
+            <div><span class="muted">Marca / modelo</span><strong>{{ h.vehiculo?.marca }} {{ h.vehiculo?.modelo }}</strong></div>
+            <div><span class="muted">Anio</span><strong>{{ h.vehiculo?.anio }}</strong></div>
+            <div><span class="muted">Kilometraje actual</span><strong>{{ h.vehiculo?.kilometrajeActual }} km</strong></div>
+          </div>
+        </article>
+      </section>
+
+      <section class="card">
+        <header class="card-header">
+          <h2 class="card-title">Visitas registradas</h2>
+          <span class="muted">{{ h.visitas.length }} servicio(s)</span>
+        </header>
+
+        @if (h.visitas.length === 0) {
+          <p class="empty">El vehiculo no tiene ordenes registradas.</p>
+        } @else {
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Orden</th>
+                  <th>Fecha</th>
+                  <th>Paquete</th>
+                  <th>Mecanico</th>
+                  <th>Km</th>
+                  <th>Estado</th>
+                  <th class="derecha">Total</th>
+                  <th class="derecha">Saldo</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (visita of h.visitas; track visita.informeId) {
+                  <tr>
+                    <td><a class="mono" [routerLink]="['/ordenes', visita.informeId]">{{ visita.numeroOrden }}</a></td>
+                    <td>{{ visita.fecha | date: 'dd/MM/yyyy' }}</td>
+                    <td>{{ visita.paquete }}</td>
+                    <td>{{ visita.mecanico }}</td>
+                    <td class="money">{{ visita.kilometraje }} km</td>
+                    <td><span [class]="claseEstado(visita.estado)">{{ visita.estado.replaceAll('_', ' ') }}</span></td>
+                    <td class="derecha money">S/ {{ visita.total | number: '1.2-2' }}</td>
+                    <td class="derecha money" [class.saldo]="visita.saldoPendiente > 0">
+                      S/ {{ visita.saldoPendiente | number: '1.2-2' }}
+                    </td>
+                    <td>
+                      @if (visita.fichaTecnicaPdfUrl) {
+                        <a
+                          class="btn btn-ghost btn-sm"
+                          [href]="taller.urlArchivo(visita.fichaTecnicaPdfUrl)"
+                          target="_blank"
+                          rel="noopener"
+                        >
+                          Ficha PDF
+                        </a>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </section>
+    } @else if (busco()) {
+      <p class="empty">Sin resultados.</p>
+    } @else {
+      <div class="card empty">
+        Ingrese una placa para consultar el historial de servicios del vehiculo.
+      </div>
+    }
+  }
+
+  @if (pestana() === 'recordatorios') {
+    <section class="card">
+      <div class="toolbar">
+        <div class="fila">
+          <span class="muted">Ventana de aviso</span>
+          <select class="select" [value]="dias()" (change)="seleccionarDias($any($event.target).value)">
+            <option value="15">15 dias</option>
+            <option value="30">30 dias</option>
+            <option value="60">60 dias</option>
+            <option value="90">90 dias</option>
+            <option value="180">180 dias</option>
+            <option value="365">365 dias</option>
+          </select>
+        </div>
+        <button class="btn btn-secondary btn-sm" type="button" (click)="cargarRecordatorios()" [disabled]="cargandoRecordatorios()">
+          Actualizar
+        </button>
+        <span class="muted">{{ recordatorios().length }} recordatorio(s)</span>
+      </div>
+
+      @if (errorRecordatorios()) {
+        <div class="card-body"><div class="alert alert-error">{{ errorRecordatorios() }}</div></div>
+      } @else if (cargandoRecordatorios()) {
+        <div class="cargando">
+          <span class="spinner spinner--oscuro"></span>
+          Cargando recordatorios...
+        </div>
+      } @else if (recordatorios().length === 0) {
+        <p class="empty">No hay mantenimientos proximos en la ventana seleccionada.</p>
+      } @else {
+        <div class="card-body lista-recordatorios">
+          @for (recordatorio of recordatorios(); track recordatorio.informeId) {
+            <article class="recordatorio">
+              <div class="recordatorio-info">
+                <div class="fila">
+                  <strong class="mono">{{ recordatorio.placa }}</strong>
+                  <span class="badge">{{ recordatorio.marcaModelo }}</span>
+                  <span [class]="claseAlerta(recordatorio.estadoAlerta)">{{ recordatorio.motivo }}</span>
+                </div>
+                <p class="muted">{{ recordatorio.clienteNombre }} · {{ recordatorio.telefonoWhatsapp }}</p>
+                <p class="recordatorio-mensaje">{{ recordatorio.mensaje }}</p>
+              </div>
+              <div class="recordatorio-datos">
+                <div><span class="muted">Proximo servicio</span><strong>{{ recordatorio.fechaProximoServicio | date: 'dd/MM/yyyy' }}</strong></div>
+                <div><span class="muted">Dias restantes</span><strong>{{ recordatorio.diasRestantes }}</strong></div>
+                <div><span class="muted">Km restantes</span><strong>{{ recordatorio.kmRestantes }}</strong></div>
+                <a class="btn btn-secondary btn-sm" [href]="recordatorio.whatsappUrl" target="_blank" rel="noopener">
+                  Enviar WhatsApp
+                </a>
+              </div>
+            </article>
+          }
+        </div>
+      }
+    </section>
+  }
+
+  @if (pestana() === 'productividad') {
+    <section class="stat-grid">
+      <article class="stat-card stat-card--azul">
+        <p class="stat-label">Mecanicos</p>
+        <p class="stat-value">{{ productividad().length }}</p>
+        <p class="stat-hint">En el reporte</p>
+      </article>
+      <article class="stat-card">
+        <p class="stat-label">Ordenes</p>
+        <p class="stat-value">{{ totalOrdenes() }}</p>
+        <p class="stat-hint">Asignadas al equipo</p>
+      </article>
+      <article class="stat-card stat-card--verde">
+        <p class="stat-label">Facturado</p>
+        <p class="stat-value money">S/ {{ totalFacturado() | number: '1.2-2' }}</p>
+        <p class="stat-hint">Total de ordenes</p>
+      </article>
+    </section>
+
+    <section class="card">
+      <header class="card-header">
+        <h2 class="card-title">Productividad por mecanico</h2>
+        <button class="btn btn-secondary btn-sm" type="button" (click)="cargarProductividad()" [disabled]="cargandoProductividad()">
+          Actualizar
+        </button>
+      </header>
+
+      @if (errorProductividad()) {
+        <div class="card-body"><div class="alert alert-error">{{ errorProductividad() }}</div></div>
+      } @else if (cargandoProductividad()) {
+        <div class="cargando">
+          <span class="spinner spinner--oscuro"></span>
+          Cargando productividad...
+        </div>
+      } @else if (productividad().length === 0) {
+        <p class="empty">No hay mecanicos registrados.</p>
+      } @else {
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Mecanico</th>
+                <th>Especialidad</th>
+                <th>Estado</th>
+                <th class="derecha">Ordenes</th>
+                <th class="derecha">Entregadas</th>
+                <th class="derecha">% entregadas</th>
+                <th class="derecha">Facturado</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of productividad(); track item.mecanicoId) {
+                <tr>
+                  <td><strong>{{ item.nombreCompleto }}</strong></td>
+                  <td>{{ item.especialidad || '—' }}</td>
+                  <td>
+                    <span
+                      class="badge"
+                      [class.badge--entregado]="item.activo"
+                      [class.badge--cancelado]="!item.activo"
+                    >
+                      {{ item.activo ? 'ACTIVO' : 'INACTIVO' }}
+                    </span>
+                  </td>
+                  <td class="derecha money">{{ item.totalOrdenes }}</td>
+                  <td class="derecha money">{{ item.ordenesEntregadas }}</td>
+                  <td class="derecha">
+                    <div class="barra-mini">
+                      <span [style.width]="porcentajeEntregadas(item) + '%'"></span>
+                    </div>
+                    <span class="muted">{{ porcentajeEntregadas(item) }}%</span>
+                  </td>
+                  <td class="derecha money">S/ {{ item.totalFacturado | number: '1.2-2' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  }
+</div>

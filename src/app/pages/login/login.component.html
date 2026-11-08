@@ -1,0 +1,100 @@
+<div class="login-page">
+  <section class="brand-panel">
+    <div class="brand-top">
+      <div class="logo">TM</div>
+      <div>
+        <p class="brand-name">Taller Mecanico</p>
+        <p class="brand-tag">Gestion integral del servicio automotriz</p>
+      </div>
+    </div>
+
+    <div class="brand-copy">
+      <p class="eyebrow">Sistema de taller</p>
+      <h1>Ordenes, citas e inventario en un solo lugar.</h1>
+      <p class="brand-desc">
+        Controle el ingreso de vehiculos, el checklist de 19 puntos, los consumos, los pagos y la
+        entrega del servicio con trazabilidad completa.
+      </p>
+
+      <ul class="brand-lista">
+        <li><span></span> Checklist tecnico de 19 puntos por orden</li>
+        <li><span></span> Control de stock, consumos y adicionales</li>
+        <li><span></span> Reportes, historial y recordatorios</li>
+      </ul>
+    </div>
+
+    <p class="brand-pie">Spring Boot · MySQL · Angular</p>
+  </section>
+
+  <section class="form-panel">
+    <div class="login-card">
+      <header class="login-header">
+        <p class="eyebrow">Bienvenido</p>
+        <h2>Iniciar sesion</h2>
+        <p class="login-sub">Ingrese con su cuenta para administrar el taller.</p>
+      </header>
+
+      <form [formGroup]="formulario" (ngSubmit)="enviar()" novalidate>
+        <div class="field">
+          <label for="username">Usuario</label>
+          <input
+            id="username"
+            class="input"
+            type="text"
+            formControlName="username"
+            autocomplete="username"
+            placeholder="admin"
+          />
+          @if (formulario.controls.username.touched && formulario.controls.username.invalid) {
+            <p class="field-error">El usuario es obligatorio.</p>
+          }
+        </div>
+
+        <div class="field">
+          <label for="password">Contrasena</label>
+          <div class="clave">
+            <input
+              id="password"
+              class="input"
+              [type]="verClave() ? 'text' : 'password'"
+              formControlName="password"
+              autocomplete="current-password"
+              placeholder="••••••••"
+            />
+            <button
+              class="ver"
+              type="button"
+              (click)="verClave.set(!verClave())"
+              [attr.aria-label]="verClave() ? 'Ocultar contrasena' : 'Mostrar contrasena'"
+            >
+              {{ verClave() ? 'Ocultar' : 'Ver' }}
+            </button>
+          </div>
+          @if (formulario.controls.password.touched && formulario.controls.password.invalid) {
+            <p class="field-error">La contrasena debe tener al menos 4 caracteres.</p>
+          }
+        </div>
+
+        @if (error()) {
+          <div class="alert alert-error">{{ error() }}</div>
+        }
+
+        <button class="btn btn-primary btn-login" type="submit" [disabled]="cargando()">
+          @if (cargando()) {
+            <span class="spinner"></span>
+            Ingresando...
+          } @else {
+            Ingresar al sistema
+          }
+        </button>
+      </form>
+
+      <div class="demo">
+        <span class="demo-titulo">Acceso demo</span>
+        <span>Usuario <strong>admin</strong> · Clave <strong>admin123</strong></span>
+      </div>
+    </div>
+
+    <p class="legal">Proyecto academico · Taller Mecanico Automotriz</p>
+  </section>
+</div>

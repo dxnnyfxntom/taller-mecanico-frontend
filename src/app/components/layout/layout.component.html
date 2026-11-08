@@ -1,0 +1,100 @@
+<div class="shell">
+  <aside class="sidebar" [class.abierto]="menuAbierto()">
+    <div class="marca">
+      <div class="logo">TM</div>
+      <div class="marca-texto">
+        <span class="marca-titulo">Taller Mecanico</span>
+        <span class="marca-sub">Gestion integral</span>
+      </div>
+    </div>
+
+    <nav class="nav" aria-label="Menú principal">
+      @for (grupo of grupos; track grupo.titulo) {
+        <p class="grupo">{{ grupo.titulo }}</p>
+        @for (enlace of grupo.enlaces; track enlace.ruta) {
+          <a
+            class="enlace"
+            [routerLink]="enlace.ruta"
+            routerLinkActive="activo"
+            ariaCurrentWhenActive="page"
+            (click)="menuAbierto.set(false)"
+          >
+            <svg
+              class="enlace-icono"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path [attr.d]="enlace.icono" />
+            </svg>
+            <span>{{ enlace.etiqueta }}</span>
+            @switch (enlace.indicador) {
+              @case ('citas') {
+                @if (indicadores()?.citasPendientes; as pendientes) {
+                  <span class="contador" title="Citas pendientes">
+                    {{ pendientes }}<span class="solo-lectores"> pendientes</span>
+                  </span>
+                }
+              }
+              @case ('ordenes') {
+                @if (indicadores()?.ordenesActivas; as activas) {
+                  <span class="contador contador--ordenes" title="Órdenes activas">
+                    {{ activas }}<span class="solo-lectores"> activas</span>
+                  </span>
+                }
+              }
+              @case ('stock') {
+                @if (indicadores()?.insumosStockCritico) {
+                  <span class="alerta-stock" title="Hay insumos en stock crítico">
+                    <span class="solo-lectores"> Hay insumos en stock crítico</span>
+                  </span>
+                }
+              }
+            }
+          </a>
+        }
+      }
+    </nav>
+
+    <div class="pie">
+      <p>Backend Spring Boot</p>
+      <p class="pie-suave">API v1.0 · MySQL</p>
+    </div>
+  </aside>
+
+  @if (menuAbierto()) {
+    <div class="velo" (click)="menuAbierto.set(false)"></div>
+  }
+
+  <div class="contenido">
+    <header class="topbar">
+      <button class="hamburguesa" type="button" (click)="menuAbierto.set(true)" aria-label="Abrir menu">
+        <span></span><span></span><span></span>
+      </button>
+
+      <div class="topbar-fecha">
+        <span class="fecha-etiqueta">Hoy</span>
+        <span>{{ hoy }}</span>
+      </div>
+
+      <div class="usuario">
+        <div class="avatar">{{ iniciales() }}</div>
+        <div class="usuario-datos">
+          <span class="usuario-nombre">{{ auth.usuario()?.nombreCompleto }}</span>
+          <span class="usuario-rol">{{ auth.usuario()?.rol }}</span>
+        </div>
+        <button class="btn btn-secondary btn-sm" type="button" (click)="cerrarSesion()">
+          Salir
+        </button>
+      </div>
+    </header>
+
+    <main class="main">
+      <router-outlet />
+    </main>
+  </div>
+</div>

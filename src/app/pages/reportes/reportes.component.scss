@@ -1,0 +1,146 @@
+.pestanas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px;
+  background: var(--superficie);
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  width: fit-content;
+}
+
+.pestana {
+  border: none;
+  background: transparent;
+  padding: 9px 16px;
+  border-radius: var(--radio-sm);
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background var(--transicion), color var(--transicion);
+}
+
+.pestana:hover {
+  background: var(--fondo-suave);
+  color: var(--tinta-suave);
+}
+
+.pestana.activa {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.28);
+}
+
+.buscador {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.buscador .field {
+  flex: 1;
+  min-width: 220px;
+}
+
+.datos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+}
+
+.datos div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.datos strong {
+  font-size: 13px;
+}
+
+.derecha {
+  text-align: right;
+}
+
+.saldo {
+  color: var(--rojo);
+}
+
+.lista-recordatorios {
+  display: flex;
+  flex-direction: column;
+}
+
+.recordatorio {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--linea);
+}
+
+.recordatorio:last-child {
+  border-bottom: none;
+}
+
+.recordatorio-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.recordatorio-mensaje {
+  font-size: 13px;
+  color: var(--tinta-suave);
+  max-width: 620px;
+}
+
+.recordatorio-datos {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.recordatorio-datos div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: right;
+}
+
+.barra-mini {
+  width: 90px;
+  height: 6px;
+  margin-left: auto;
+  border-radius: 999px;
+  background: var(--linea);
+  overflow: hidden;
+  margin-bottom: 3px;
+}
+
+.barra-mini span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #fb923c, #ea580c);
+}
+
+@media (max-width: 820px) {
+  .recordatorio {
+    flex-direction: column;
+  }
+
+  .recordatorio-datos {
+    justify-content: flex-start;
+  }
+
+  .recordatorio-datos div {
+    text-align: left;
+  }
+}

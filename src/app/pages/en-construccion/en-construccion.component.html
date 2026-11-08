@@ -1,0 +1,28 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <h1 class="page-title">{{ titulo() }}</h1>
+      <p class="page-subtitle">{{ descripcion() }}</p>
+    </div>
+  </header>
+
+  <section class="card panel">
+    <div class="icono">🚧</div>
+    <h2>Modulo en construccion</h2>
+    <p>
+      Hola {{ usuario() }}. La API de este modulo ya esta disponible en el backend
+      (Spring Boot + MySQL), pero la interfaz se completara en la siguiente iteracion.
+    </p>
+
+    <div class="chips">
+      <span class="badge badge--en_proceso">Backend listo</span>
+      <span class="badge badge--recepcionado">Angular standalone</span>
+      <span class="badge">Proxima entrega</span>
+    </div>
+
+    <div class="acciones">
+      <a class="btn btn-secondary" routerLink="/dashboard">Volver al dashboard</a>
+      <a class="btn btn-primary" routerLink="/ordenes">Ir a ordenes</a>
+    </div>
+  </section>
+</div>

@@ -1,0 +1,49 @@
+.inicial {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--azul-suave);
+  color: var(--azul);
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+
+.campo-ancho {
+  grid-column: 1 / -1;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--tinta-suave);
+  cursor: pointer;
+}
+
+.check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--marca);
+}
+
+.acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.aviso {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 90;
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 12px 18px;
+  border-radius: 10px;
+  box-shadow: var(--sombra-alta);
+  font-weight: 600;
+}

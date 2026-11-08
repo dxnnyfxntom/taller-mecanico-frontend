@@ -1,0 +1,97 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <h1 class="page-title">Ordenes de trabajo</h1>
+      <p class="page-subtitle">Seguimiento del servicio desde el ingreso hasta la entrega.</p>
+    </div>
+    <div class="page-actions">
+      <a class="btn btn-secondary" routerLink="/citas">Agenda de citas</a>
+      <button class="btn btn-primary" type="button" (click)="cargar()">Actualizar</button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <div class="alert alert-error">{{ error() }}</div>
+  }
+
+  <section class="card">
+    <div class="toolbar">
+      <input
+        class="input search"
+        type="search"
+        placeholder="Buscar por orden, cliente, placa o paquete..."
+        [value]="busqueda()"
+        (input)="busqueda.set($any($event.target).value)"
+      />
+      <select
+        class="select"
+        [value]="filtroEstado()"
+        (change)="filtroEstado.set($any($event.target).value)"
+      >
+        <option value="">Todos los estados</option>
+        @for (estado of estados; track estado) {
+          <option [value]="estado">{{ estado.replaceAll('_', ' ') }}</option>
+        }
+      </select>
+      <span class="muted">{{ filtradas().length }} orden(es)</span>
+    </div>
+
+    @if (cargando()) {
+      <div class="cargando">
+        <span class="spinner spinner--oscuro"></span>
+        Cargando ordenes...
+      </div>
+    } @else if (filtradas().length === 0) {
+      <p class="empty">No hay ordenes para los filtros seleccionados.</p>
+    } @else {
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Orden</th>
+              <th>Cliente</th>
+              <th>Vehiculo</th>
+              <th>Paquete</th>
+              <th>Ingreso</th>
+              <th>Estado</th>
+              <th class="derecha">Total</th>
+              <th class="derecha">Saldo</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (orden of filtradas(); track orden.id) {
+              <tr>
+                <td>
+                  <a class="mono" [routerLink]="['/ordenes', orden.id]">{{ orden.numeroOrden }}</a>
+                </td>
+                <td>
+                  <div class="columna">
+                    <span>{{ orden.clienteNombre }}</span>
+                    <span class="muted">{{ orden.clienteTelefono }}</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="columna">
+                    <strong class="placa">{{ orden.placa }}</strong>
+                    <span class="muted">{{ orden.marcaModelo }}</span>
+                  </div>
+                </td>
+                <td class="paquete">{{ orden.paqueteNombre }}</td>
+                <td>{{ orden.fechaIngreso | date: 'dd/MM/yyyy HH:mm' }}</td>
+                <td>
+                  <span [class]="claseEstado(orden.estado)">
+                    {{ orden.estado.replaceAll('_', ' ') }}
+                  </span>
+                </td>
+                <td class="derecha money">S/ {{ orden.totalOrden | number: '1.2-2' }}</td>
+                <td class="derecha money" [class.saldo]="orden.saldoPendiente > 0">
+                  S/ {{ orden.saldoPendiente | number: '1.2-2' }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</div>

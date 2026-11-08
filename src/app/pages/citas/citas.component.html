@@ -1,0 +1,328 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <h1 class="page-title">Citas</h1>
+      <p class="page-subtitle">Agenda de recepcion y control de capacidad del taller.</p>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-primary" type="button" (click)="abrirNueva()">Nueva cita</button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <div class="alert alert-error">{{ error() }}</div>
+  }
+
+  <section class="card">
+    <div class="toolbar">
+      <input
+        class="input search"
+        type="search"
+        placeholder="Buscar por cliente, placa o paquete..."
+        [value]="busqueda()"
+        (input)="busqueda.set($any($event.target).value)"
+      />
+      <select
+        class="select"
+        [value]="filtroEstado()"
+        (change)="filtroEstado.set($any($event.target).value)"
+      >
+        <option value="">Todos los estados</option>
+        @for (estado of estados; track estado) {
+          <option [value]="estado">{{ estado.replaceAll('_', ' ') }}</option>
+        }
+      </select>
+      <span class="muted">{{ filtradas().length }} cita(s)</span>
+    </div>
+
+    @if (cargando()) {
+      <div class="cargando">
+        <span class="spinner spinner--oscuro"></span>
+        Cargando citas...
+      </div>
+    } @else if (filtradas().length === 0) {
+      <p class="empty">No hay citas para los filtros seleccionados.</p>
+    } @else {
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Fecha programada</th>
+              <th>Cliente</th>
+              <th>Vehiculo</th>
+              <th>Paquete</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (cita of filtradas(); track cita.id) {
+              <tr>
+                <td>
+                  <div class="columna">
+                    <strong>{{ cita.fechaHoraInicio | date: 'dd/MM/yyyy' }}</strong>
+                    <span class="muted">{{ cita.fechaHoraInicio | date: 'HH:mm' }} hrs</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="columna">
+                    <span>{{ cita.clienteNombre }}</span>
+                    <span class="muted">{{ cita.clienteTelefono }}</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="columna">
+                    <strong class="placa">{{ cita.placa }}</strong>
+                    <span class="muted">{{ cita.marcaModelo }}</span>
+                  </div>
+                </td>
+                <td>{{ cita.paqueteNombre }}</td>
+                <td>
+                  <span [class]="claseEstado(cita.estadoCita)">
+                    {{ cita.estadoCita.replaceAll('_', ' ') }}
+                  </span>
+                </td>
+                <td>
+                  <div class="acciones">
+                    @if (!cita.informeId && cita.estadoCita !== 'CANCELADA') {
+                      <button class="btn btn-primary btn-sm" type="button" (click)="abrirConversion(cita)">
+                        Convertir a orden
+                      </button>
+                    }
+                    @if (cita.estadoCita === 'PENDIENTE') {
+                      <button class="btn btn-ghost btn-sm" type="button" (click)="confirmar(cita)">
+                        Confirmar
+                      </button>
+                    }
+                    @if (cita.estadoCita !== 'CANCELADA' && cita.estadoCita !== 'EN_TALLER') {
+                      <button class="btn btn-ghost btn-sm" type="button" (click)="cancelar(cita)">
+                        Cancelar
+                      </button>
+                    }
+                    @if (!cita.informeId) {
+                      <button class="btn btn-danger btn-sm" type="button" (click)="eliminar(cita)">
+                        Eliminar
+                      </button>
+                    } @else {
+                      <a
+                        class="badge badge--entregado badge-link"
+                        [routerLink]="['/ordenes', cita.informeId]"
+                        title="Ver la orden de trabajo"
+                      >
+                        Convertida
+                      </a>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</div>
+
+@if (modalAbierto()) {
+  <div class="modal-backdrop" (click)="cerrarModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <header class="modal-header">
+        <h2 class="modal-title">Nueva cita</h2>
+        <button class="icon-btn" type="button" (click)="cerrarModal()" aria-label="Cerrar">×</button>
+      </header>
+
+      <form [formGroup]="formulario" (ngSubmit)="guardar()" novalidate>
+        <div class="modal-body form-grid form-grid--2">
+          <div class="field">
+            <label for="clienteId">Cliente</label>
+            <select id="clienteId" class="select" formControlName="clienteId">
+              <option [value]="0" disabled>Seleccione un cliente</option>
+              @for (cliente of clientes(); track cliente.id) {
+                <option [value]="cliente.id">{{ cliente.nombreCompleto }}</option>
+              }
+            </select>
+            @if (formulario.controls.clienteId.touched && formulario.controls.clienteId.invalid) {
+              <p class="field-error">Seleccione un cliente.</p>
+            }
+          </div>
+
+          <div class="field">
+            <label for="vehiculoId">Vehiculo</label>
+            <select id="vehiculoId" class="select" formControlName="vehiculoId">
+              <option [value]="0" disabled>
+                {{ vehiculosCliente().length ? 'Seleccione un vehiculo' : 'El cliente no tiene vehiculos' }}
+              </option>
+              @for (vehiculo of vehiculosCliente(); track vehiculo.id) {
+                <option [value]="vehiculo.id">{{ vehiculo.placa }} · {{ vehiculo.marca }} {{ vehiculo.modelo }}</option>
+              }
+            </select>
+            @if (formulario.controls.vehiculoId.touched && formulario.controls.vehiculoId.invalid) {
+              <p class="field-error">Seleccione un vehiculo.</p>
+            }
+          </div>
+
+          <div class="field">
+            <label for="paqueteId">Paquete</label>
+            <select id="paqueteId" class="select" formControlName="paqueteId">
+              @for (paquete of paquetes(); track paquete.id) {
+                <option [value]="paquete.id">{{ paquete.nombre }} · S/ {{ paquete.precioBase }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="fechaHoraInicio">Fecha y hora</label>
+            <input
+              id="fechaHoraInicio"
+              class="input"
+              type="datetime-local"
+              formControlName="fechaHoraInicio"
+            />
+            @if (
+              formulario.controls.fechaHoraInicio.touched &&
+              formulario.controls.fechaHoraInicio.invalid
+            ) {
+              <p class="field-error">Indique la fecha y hora de la cita.</p>
+            }
+          </div>
+
+          <div class="field campo-ancho">
+            <label for="observaciones">Observaciones</label>
+            <textarea id="observaciones" class="textarea" formControlName="observaciones"></textarea>
+          </div>
+        </div>
+
+        <footer class="modal-footer">
+          <button class="btn btn-secondary" type="button" (click)="cerrarModal()">Cancelar</button>
+          <button class="btn btn-primary" type="submit" [disabled]="guardando()">
+            @if (guardando()) {
+              <span class="spinner"></span>
+            }
+            Registrar cita
+          </button>
+        </footer>
+      </form>
+    </div>
+  </div>
+}
+
+@if (modalConversion()) {
+  <div class="modal-backdrop" (click)="cerrarConversion()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <header class="modal-header">
+        <div>
+          <h2 class="modal-title">Convertir cita a orden</h2>
+          @if (citaAConvertir(); as cita) {
+            <p class="modal-subtitulo">
+              {{ cita.placa }} &middot; {{ cita.marcaModelo }} &middot; {{ cita.clienteNombre }}
+            </p>
+          }
+        </div>
+        <button class="icon-btn" type="button" (click)="cerrarConversion()" aria-label="Cerrar">
+          &times;
+        </button>
+      </header>
+
+      <form [formGroup]="formularioConversion" (ngSubmit)="convertir()" novalidate>
+        <div class="modal-body">
+          @if (errorConversion()) {
+            <div class="alert alert-error">{{ errorConversion() }}</div>
+          }
+
+          @if (mecanicos().length === 0) {
+            <div class="alert alert-error">
+              No hay mecanicos activos. Registre uno en la seccion Mecanicos antes de convertir la cita.
+            </div>
+          }
+
+          <p class="muted conversion-nota">
+            Se creara la orden con el paquete
+            <strong>{{ citaAConvertir()?.paqueteNombre }}</strong> y su checklist de 19 puntos.
+          </p>
+
+          <div class="form-grid form-grid--2">
+            <div class="field">
+              <label for="mecanicoId">Mecanico responsable</label>
+              <select id="mecanicoId" class="select" formControlName="mecanicoId">
+                <option [value]="0" disabled>Seleccione un mecanico</option>
+                @for (mecanico of mecanicos(); track mecanico.id) {
+                  <option [value]="mecanico.id">{{ mecanico.nombreCompleto }}</option>
+                }
+              </select>
+              @if (
+                formularioConversion.controls.mecanicoId.touched &&
+                formularioConversion.controls.mecanicoId.invalid
+              ) {
+                <p class="field-error">Seleccione el mecanico responsable.</p>
+              }
+            </div>
+
+            <div class="field">
+              <label for="kilometrajeIngreso">Kilometraje de ingreso</label>
+              <input
+                id="kilometrajeIngreso"
+                class="input"
+                type="number"
+                min="0"
+                formControlName="kilometrajeIngreso"
+              />
+              @if (
+                formularioConversion.controls.kilometrajeIngreso.touched &&
+                formularioConversion.controls.kilometrajeIngreso.invalid
+              ) {
+                <p class="field-error">Ingrese un kilometraje valido.</p>
+              }
+            </div>
+
+            <div class="field">
+              <label for="nivelCombustible">Nivel de combustible</label>
+              <select id="nivelCombustible" class="select" formControlName="nivelCombustible">
+                @for (nivel of niveles; track nivel.valor) {
+                  <option [value]="nivel.valor">{{ nivel.etiqueta }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="field campo-ancho">
+              <label for="inventarioRecepcion">Inventario de recepcion</label>
+              <textarea
+                id="inventarioRecepcion"
+                class="textarea"
+                formControlName="inventarioRecepcion"
+                placeholder="Documentos, llave de repuesto, triangulo, herramientas..."
+              ></textarea>
+            </div>
+
+            <div class="field campo-ancho">
+              <label for="observacionesRecepcion">Observaciones de recepcion</label>
+              <textarea
+                id="observacionesRecepcion"
+                class="textarea"
+                formControlName="observacionesRecepcion"
+                placeholder="Estado general, golpes, detalles entregados por el cliente..."
+              ></textarea>
+            </div>
+          </div>
+        </div>
+
+        <footer class="modal-footer">
+          <button class="btn btn-secondary" type="button" (click)="cerrarConversion()">Cancelar</button>
+          <button
+            class="btn btn-primary"
+            type="submit"
+            [disabled]="convirtiendo() || mecanicos().length === 0"
+          >
+            @if (convirtiendo()) {
+              <span class="spinner"></span>
+            }
+            Convertir y abrir orden
+          </button>
+        </footer>
+      </form>
+    </div>
+  </div>
+}
+
+@if (aviso()) {
+  <div class="aviso">{{ aviso() }}</div>
+}

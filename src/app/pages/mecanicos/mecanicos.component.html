@@ -1,0 +1,172 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <h1 class="page-title">Mecanicos</h1>
+      <p class="page-subtitle">Equipo tecnico y especialidades del taller.</p>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-primary" type="button" (click)="abrirNuevo()">Nuevo mecanico</button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <div class="alert alert-error">{{ error() }}</div>
+  }
+
+  <section class="stat-grid">
+    <article class="stat-card">
+      <p class="stat-label">Total</p>
+      <p class="stat-value">{{ mecanicos().length }}</p>
+      <p class="stat-hint">Mecanicos registrados</p>
+    </article>
+    <article class="stat-card stat-card--verde">
+      <p class="stat-label">Activos</p>
+      <p class="stat-value">{{ activos() }}</p>
+      <p class="stat-hint">Disponibles para asignacion</p>
+    </article>
+    <article class="stat-card stat-card--ambar">
+      <p class="stat-label">Inactivos</p>
+      <p class="stat-value">{{ inactivos() }}</p>
+      <p class="stat-hint">Fuera de servicio</p>
+    </article>
+  </section>
+
+  <section class="card">
+    <div class="toolbar">
+      <input
+        class="input search"
+        type="search"
+        placeholder="Buscar por nombre, DNI, especialidad o telefono..."
+        [value]="busqueda()"
+        (input)="busqueda.set($any($event.target).value)"
+      />
+      <select class="select" [value]="filtro()" (change)="filtro.set($any($event.target).value)">
+        <option value="todos">Todos</option>
+        <option value="activos">Solo activos</option>
+        <option value="inactivos">Solo inactivos</option>
+      </select>
+      <span class="muted">{{ filtrados().length }} mecanico(s)</span>
+    </div>
+
+    @if (cargando()) {
+      <div class="cargando">
+        <span class="spinner spinner--oscuro"></span>
+        Cargando mecanicos...
+      </div>
+    } @else if (filtrados().length === 0) {
+      <p class="empty">No hay mecanicos para los filtros seleccionados.</p>
+    } @else {
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Mecanico</th>
+              <th>DNI</th>
+              <th>Especialidad</th>
+              <th>Telefono</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (mecanico of filtrados(); track mecanico.id) {
+              <tr>
+                <td>
+                  <div class="fila">
+                    <span class="inicial">{{ mecanico.nombreCompleto.charAt(0) }}</span>
+                    <strong>{{ mecanico.nombreCompleto }}</strong>
+                  </div>
+                </td>
+                <td class="mono">{{ mecanico.dni }}</td>
+                <td>{{ mecanico.especialidad || '—' }}</td>
+                <td>{{ mecanico.telefono || '—' }}</td>
+                <td>
+                  <span
+                    class="badge"
+                    [class.badge--entregado]="mecanico.activo"
+                    [class.badge--cancelado]="!mecanico.activo"
+                  >
+                    {{ mecanico.activo ? 'ACTIVO' : 'INACTIVO' }}
+                  </span>
+                </td>
+                <td>
+                  <div class="acciones">
+                    <button class="btn btn-ghost btn-sm" type="button" (click)="abrirEditar(mecanico)">
+                      Editar
+                    </button>
+                    <button class="btn btn-danger btn-sm" type="button" (click)="eliminar(mecanico)">
+                      Eliminar
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</div>
+
+@if (modalAbierto()) {
+  <div class="modal-backdrop" (click)="cerrarModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <header class="modal-header">
+        <h2 class="modal-title">{{ editando() ? 'Editar mecanico' : 'Nuevo mecanico' }}</h2>
+        <button class="icon-btn" type="button" (click)="cerrarModal()" aria-label="Cerrar">×</button>
+      </header>
+
+      <form [formGroup]="formulario" (ngSubmit)="guardar()" novalidate>
+        <div class="modal-body form-grid form-grid--2">
+          <div class="field campo-ancho">
+            <label for="nombreCompleto">Nombre completo</label>
+            <input id="nombreCompleto" class="input" formControlName="nombreCompleto" />
+            @if (
+              formulario.controls.nombreCompleto.touched &&
+              formulario.controls.nombreCompleto.invalid
+            ) {
+              <p class="field-error">El nombre es obligatorio.</p>
+            }
+          </div>
+
+          <div class="field">
+            <label for="dni">DNI</label>
+            <input id="dni" class="input" formControlName="dni" maxlength="20" />
+            @if (formulario.controls.dni.touched && formulario.controls.dni.invalid) {
+              <p class="field-error">El DNI es obligatorio.</p>
+            }
+          </div>
+
+          <div class="field">
+            <label for="telefono">Telefono</label>
+            <input id="telefono" class="input" formControlName="telefono" maxlength="20" />
+          </div>
+
+          <div class="field campo-ancho">
+            <label for="especialidad">Especialidad</label>
+            <input id="especialidad" class="input" formControlName="especialidad" maxlength="100" />
+          </div>
+
+          <label class="check campo-ancho">
+            <input type="checkbox" formControlName="activo" />
+            <span>Mecanico activo (disponible para asignacion)</span>
+          </label>
+        </div>
+
+        <footer class="modal-footer">
+          <button class="btn btn-secondary" type="button" (click)="cerrarModal()">Cancelar</button>
+          <button class="btn btn-primary" type="submit" [disabled]="guardando()">
+            @if (guardando()) {
+              <span class="spinner"></span>
+            }
+            {{ editando() ? 'Guardar cambios' : 'Registrar mecanico' }}
+          </button>
+        </footer>
+      </form>
+    </div>
+  </div>
+}
+
+@if (aviso()) {
+  <div class="aviso">{{ aviso() }}</div>
+}

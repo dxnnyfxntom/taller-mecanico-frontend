@@ -1,0 +1,689 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <a class="volver" routerLink="/ordenes">← Volver a ordenes</a>
+      @if (informe(); as i) {
+        <h1 class="page-title mono">{{ i.numeroOrden }}</h1>
+        <p class="page-subtitle">
+          {{ i.cliente.nombreCompleto }} · {{ i.vehiculo.placa }} · {{ i.vehiculo.marca }}
+          {{ i.vehiculo.modelo }}
+        </p>
+      } @else {
+        <h1 class="page-title">Orden de trabajo</h1>
+      }
+    </div>
+
+    @if (informe(); as i) {
+      <div class="page-actions">
+        <span [class]="claseEstado(i.estado)">{{ i.estado.replaceAll('_', ' ') }}</span>
+        @if (siguienteEstado(); as siguiente) {
+          <button class="btn btn-primary" type="button" (click)="avanzar()" [disabled]="procesando()">
+            @if (procesando()) {
+              <span class="spinner"></span>
+            }
+            Pasar a {{ siguiente.replaceAll('_', ' ') }}
+          </button>
+        }
+      </div>
+    }
+  </header>
+
+  @if (error()) {
+    <div class="alert alert-error">{{ error() }}</div>
+  }
+
+  @if (cargando()) {
+    <div class="card cargando">
+      <span class="spinner spinner--oscuro"></span>
+      Cargando orden...
+    </div>
+  } @else if (informe(); as i) {
+    <section class="grid-2">
+      <article class="card">
+        <header class="card-header">
+          <h2 class="card-title">Datos del servicio</h2>
+          <span class="muted">{{ i.paquete.nombre }}</span>
+        </header>
+        <div class="card-body datos">
+          <div><span class="muted">Mecanico</span><strong>{{ i.mecanico.nombreCompleto }}</strong></div>
+          <div><span class="muted">Ingreso</span><strong>{{ i.fechaIngreso | date: 'dd/MM/yyyy HH:mm' }}</strong></div>
+          <div><span class="muted">Entrega estimada</span><strong>{{ i.fechaEstimadaEntrega | date: 'dd/MM/yyyy HH:mm' }}</strong></div>
+          <div><span class="muted">Kilometraje</span><strong>{{ i.kilometrajeIngreso }} km</strong></div>
+          <div><span class="muted">Combustible</span><strong>{{ i.nivelCombustible }}</strong></div>
+          <div><span class="muted">Proximo servicio</span><strong>{{ i.fechaProximoServicio | date: 'dd/MM/yyyy' }}</strong></div>
+        </div>
+      </article>
+
+      <article class="card">
+        <header class="card-header">
+          <h2 class="card-title">Totales</h2>
+          <span class="badge">{{ i.pagos.length }} pago(s)</span>
+        </header>
+        <div class="card-body totales">
+          <div><span class="muted">Paquete</span><span class="money">S/ {{ i.totales.totalPaquete | number: '1.2-2' }}</span></div>
+          <div><span class="muted">Adicionales cobrados</span><span class="money">S/ {{ i.totales.totalAdicionales | number: '1.2-2' }}</span></div>
+          <div><span class="muted">No cobrado</span><span class="money">S/ {{ i.totales.totalNoCobrado | number: '1.2-2' }}</span></div>
+          <div class="total"><span>Total orden</span><span class="money">S/ {{ i.totales.totalOrden | number: '1.2-2' }}</span></div>
+          <div><span class="muted">Pagado</span><span class="money">S/ {{ i.totales.totalPagado | number: '1.2-2' }}</span></div>
+          <div class="saldo"><span>Saldo pendiente</span><span class="money">S/ {{ i.totales.saldoPendiente | number: '1.2-2' }}</span></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="card">
+      <header class="card-header">
+        <h2 class="card-title">Checklist de 19 puntos</h2>
+        <span class="muted">{{ completados() }} / {{ totalItems() }} completados</span>
+      </header>
+      <div class="card-body">
+        <div class="progreso">
+          <span [style.width]="progreso() + '%'"></span>
+        </div>
+        <p class="muted progreso-texto">{{ progreso() }}% del checklist completado</p>
+
+        <ul class="checklist">
+          @for (item of i.checklist; track item.id) {
+            <li [class.listo]="item.accionRealizada === 'COMPLETADO'">
+              <div class="check-marca">{{ item.accionRealizada === 'COMPLETADO' ? '✓' : '' }}</div>
+              <div class="check-info">
+                <div class="fila">
+                  <span class="badge">{{ item.categoria.replaceAll('_', ' ') }}</span>
+                  @if (item.esCondicional) {
+                    <span class="badge badge--en_proceso">Condicional</span>
+                  }
+                </div>
+                <strong>{{ item.descripcionTarea }}</strong>
+                <span class="muted">
+                  {{ item.accionRealizada || 'PENDIENTE' }}
+                  @if (item.valorMedido) { · {{ item.valorMedido }} }
+                </span>
+              </div>
+              @if (item.accionRealizada !== 'COMPLETADO') {
+                <button class="btn btn-secondary btn-sm" type="button" (click)="completar(item)" [disabled]="procesando()">
+                  Completar
+                </button>
+              }
+            </li>
+          }
+        </ul>
+      </div>
+    </section>
+
+    <section class="card">
+      <header class="card-header">
+        <div>
+          <h2 class="card-title">Escaneos de diagnostico</h2>
+          <p class="modal-subtitulo">
+            El escaneo final es obligatorio para pasar la orden a LISTO PARA ENTREGA.
+          </p>
+        </div>
+        @if (editable()) {
+          <button class="btn btn-secondary btn-sm" type="button" (click)="abrirEscaneo()">
+            {{ i.escaneoInicialResultado || i.escaneoFinalResultado ? 'Editar escaneos' : 'Registrar escaneos' }}
+          </button>
+        }
+      </header>
+      <div class="card-body escaneos">
+        <div class="escaneo-bloque">
+          <span class="muted">Escaneo inicial</span>
+          @if (i.escaneoInicialResultado) {
+            <pre>{{ i.escaneoInicialResultado }}</pre>
+          } @else {
+            <p class="empty empty--inline">Sin registrar.</p>
+          }
+        </div>
+        <div class="escaneo-bloque">
+          <div class="escaneo-titulo">
+            <span class="muted">Escaneo final</span>
+            @if (!i.escaneoFinalResultado) {
+              <span class="badge badge--cancelado">Requerido</span>
+            }
+          </div>
+          @if (i.escaneoFinalResultado) {
+            <pre>{{ i.escaneoFinalResultado }}</pre>
+          } @else {
+            <p class="empty empty--inline">Sin registrar.</p>
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="grid-2">
+      <article class="card">
+        <header class="card-header">
+          <h2 class="card-title">Consumos</h2>
+          <div class="card-tools">
+            <span class="muted">{{ i.consumos.length }}</span>
+            @if (editable()) {
+              <button class="btn btn-secondary btn-sm" type="button" (click)="abrirConsumo()">
+                + Agregar
+              </button>
+            }
+          </div>
+        </header>
+        @if (i.consumos.length === 0) {
+          <p class="empty">Sin consumos registrados.</p>
+        } @else {
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Insumo</th>
+                  <th>Cant.</th>
+                  <th class="derecha">Subtotal</th>
+                  @if (editable()) {
+                    <th class="derecha">Acciones</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (c of i.consumos; track c.id) {
+                  <tr>
+                    <td>{{ c.nombre }}</td>
+                    <td>{{ c.cantidad }}</td>
+                    <td class="derecha money">S/ {{ c.subtotal | number: '1.2-2' }}</td>
+                    @if (editable()) {
+                      <td>
+                        <div class="acciones">
+                          <button class="btn btn-danger btn-sm" type="button" (click)="eliminarConsumo(c)" [disabled]="procesando()">
+                            Eliminar
+                          </button>
+                        </div>
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </article>
+
+      <article class="card">
+        <header class="card-header">
+          <h2 class="card-title">Adicionales</h2>
+          <div class="card-tools">
+            <span class="muted">{{ i.adicionales.length }}</span>
+            @if (editable()) {
+              <button class="btn btn-secondary btn-sm" type="button" (click)="abrirAdicional()">
+                + Agregar
+              </button>
+            }
+          </div>
+        </header>
+        @if (i.adicionales.length === 0) {
+          <p class="empty">Sin adicionales registrados.</p>
+        } @else {
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Descripcion</th>
+                  <th>Tipo</th>
+                  <th>Aprobado</th>
+                  <th class="derecha">Subtotal</th>
+                  @if (editable()) {
+                    <th class="derecha">Acciones</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (a of i.adicionales; track a.id) {
+                  <tr>
+                    <td>{{ a.descripcion }}</td>
+                    <td>{{ a.tipo.replaceAll('_', ' ') }}</td>
+                    <td>
+                      <span class="badge" [class.badge--entregado]="a.aprobadoPorCliente">
+                        {{ a.aprobadoPorCliente ? 'SI' : 'NO' }}
+                      </span>
+                    </td>
+                    <td class="derecha money">S/ {{ a.subtotal | number: '1.2-2' }}</td>
+                    @if (editable()) {
+                      <td>
+                        <div class="acciones">
+                          @if (a.aprobadoPorCliente) {
+                            <button class="btn btn-ghost btn-sm" type="button" (click)="cambiarAprobacion(a, false)" [disabled]="procesando()">
+                              Rechazar
+                            </button>
+                          } @else {
+                            <button class="btn btn-ghost btn-sm" type="button" (click)="cambiarAprobacion(a, true)" [disabled]="procesando()">
+                              Aprobar
+                            </button>
+                          }
+                          <button class="btn btn-ghost btn-sm" type="button" (click)="abrirAdicional(a)" [disabled]="procesando()">
+                            Editar
+                          </button>
+                          <button class="btn btn-danger btn-sm" type="button" (click)="eliminarAdicional(a)" [disabled]="procesando()">
+                            Eliminar
+                          </button>
+                        </div>
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </article>
+    </section>
+
+    <section class="grid-2">
+      <article class="card">
+        <header class="card-header">
+          <h2 class="card-title">Pagos</h2>
+          <div class="card-tools">
+            <span class="muted">{{ i.pagos.length }}</span>
+            @if (editable() && i.totales.saldoPendiente > 0) {
+              <button class="btn btn-secondary btn-sm" type="button" (click)="abrirPago()">
+                + Agregar
+              </button>
+            }
+          </div>
+        </header>
+        @if (i.pagos.length === 0) {
+          <p class="empty">Sin pagos registrados.</p>
+        } @else {
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Tipo</th>
+                  <th>Medio</th>
+                  <th class="derecha">Monto</th>
+                  @if (editable()) {
+                    <th class="derecha">Acciones</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (p of i.pagos; track p.id) {
+                  <tr>
+                    <td>{{ p.fechaPago | date: 'dd/MM/yyyy' }}</td>
+                    <td>{{ p.tipoPago }}</td>
+                    <td>{{ p.medioPago }}</td>
+                    <td class="derecha money">S/ {{ p.monto | number: '1.2-2' }}</td>
+                    @if (editable()) {
+                      <td>
+                        <div class="acciones">
+                          <button class="btn btn-danger btn-sm" type="button" (click)="eliminarPago(p)" [disabled]="procesando()">
+                            Anular
+                          </button>
+                        </div>
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </article>
+
+      <article class="card">
+        <header class="card-header">
+          <h2 class="card-title">Evidencias</h2>
+          <span class="muted">{{ i.evidencias.length }}</span>
+        </header>
+        <div class="card-body">
+          @if (i.evidencias.length === 0) {
+            <p class="empty">Sin evidencias fotograficas.</p>
+          } @else {
+            <div class="evidencias">
+              @for (e of i.evidencias; track e.id) {
+                <figure>
+                  <img [src]="taller.urlArchivo(e.urlImagen)" [alt]="e.descripcionFoto || 'Evidencia'" />
+                  <figcaption>{{ e.etapa }}</figcaption>
+                </figure>
+              }
+            </div>
+          }
+        </div>
+      </article>
+    </section>
+  }
+</div>
+
+@if (modalConsumo()) {
+  <div class="modal-backdrop" (click)="cerrarConsumo()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <header class="modal-header">
+        <div>
+          <h2 class="modal-title">Registrar consumo</h2>
+          <p class="modal-subtitulo">El stock del insumo se descuenta automaticamente.</p>
+        </div>
+        <button class="icon-btn" type="button" (click)="cerrarConsumo()" aria-label="Cerrar">
+          &times;
+        </button>
+      </header>
+
+      <form [formGroup]="formularioConsumo" (ngSubmit)="registrarConsumo()" novalidate>
+        <div class="modal-body">
+          @if (errorConsumo()) {
+            <div class="alert alert-error">{{ errorConsumo() }}</div>
+          }
+
+          @if (insumos().length === 0) {
+            <p class="muted">No hay insumos registrados en el catalogo.</p>
+          }
+
+          <div class="form-grid form-grid--2">
+            <div class="field campo-ancho">
+              <label for="insumoId">Insumo</label>
+              <select id="insumoId" class="select" formControlName="insumoId">
+                <option [value]="0" disabled>Seleccione un insumo</option>
+                @for (insumo of insumos(); track insumo.id) {
+                  <option [value]="insumo.id" [disabled]="insumo.stockActual <= 0">
+                    {{ insumo.nombre }} — stock {{ insumo.stockActual }} — S/
+                    {{ insumo.precioVenta | number: '1.2-2' }}
+                  </option>
+                }
+              </select>
+              @if (
+                formularioConsumo.controls.insumoId.touched &&
+                formularioConsumo.controls.insumoId.invalid
+              ) {
+                <p class="field-error">Seleccione un insumo.</p>
+              }
+            </div>
+
+            <div class="field">
+              <label for="cantidad">Cantidad</label>
+              <input id="cantidad" class="input" type="number" min="1" formControlName="cantidad" />
+              @if (
+                formularioConsumo.controls.cantidad.touched &&
+                formularioConsumo.controls.cantidad.invalid
+              ) {
+                <p class="field-error">La cantidad debe ser al menos 1.</p>
+              }
+            </div>
+          </div>
+        </div>
+
+        <footer class="modal-footer">
+          <button class="btn btn-secondary" type="button" (click)="cerrarConsumo()">Cancelar</button>
+          <button class="btn btn-primary" type="submit" [disabled]="guardandoConsumo() || insumos().length === 0">
+            @if (guardandoConsumo()) {
+              <span class="spinner"></span>
+            }
+            Registrar consumo
+          </button>
+        </footer>
+      </form>
+    </div>
+  </div>
+}
+
+@if (modalAdicional()) {
+  <div class="modal-backdrop" (click)="cerrarAdicional()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <header class="modal-header">
+        <div>
+          <h2 class="modal-title">
+            {{ adicionalEditando() ? 'Editar adicional' : 'Registrar adicional' }}
+          </h2>
+          <p class="modal-subtitulo">
+            Solo se cobra si esta aprobado por el cliente y marcado como cobrable.
+          </p>
+        </div>
+        <button class="icon-btn" type="button" (click)="cerrarAdicional()" aria-label="Cerrar">
+          &times;
+        </button>
+      </header>
+
+      <form [formGroup]="formularioAdicional" (ngSubmit)="guardarAdicional()" novalidate>
+        <div class="modal-body">
+          @if (errorAdicional()) {
+            <div class="alert alert-error">{{ errorAdicional() }}</div>
+          }
+
+          <div class="form-grid form-grid--2">
+            <div class="field campo-ancho">
+              <label for="descripcionAdicional">Descripcion</label>
+              <input
+                id="descripcionAdicional"
+                class="input"
+                type="text"
+                maxlength="300"
+                formControlName="descripcion"
+                placeholder="Ej. Cambio de pastillas de freno delanteras"
+              />
+              @if (
+                formularioAdicional.controls.descripcion.touched &&
+                formularioAdicional.controls.descripcion.invalid
+              ) {
+                <p class="field-error">Ingrese una descripcion (maximo 300 caracteres).</p>
+              }
+            </div>
+
+            <div class="field">
+              <label for="tipoAdicional">Tipo</label>
+              <select id="tipoAdicional" class="select" formControlName="tipo">
+                @for (tipo of tiposAdicional; track tipo.valor) {
+                  <option [value]="tipo.valor">{{ tipo.etiqueta }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="cantidadAdicional">Cantidad</label>
+              <input
+                id="cantidadAdicional"
+                class="input"
+                type="number"
+                min="1"
+                formControlName="cantidad"
+              />
+              @if (
+                formularioAdicional.controls.cantidad.touched &&
+                formularioAdicional.controls.cantidad.invalid
+              ) {
+                <p class="field-error">La cantidad debe ser al menos 1.</p>
+              }
+            </div>
+
+            <div class="field">
+              <label for="precioAdicional">Precio unitario (S/)</label>
+              <input
+                id="precioAdicional"
+                class="input"
+                type="number"
+                min="0"
+                step="0.01"
+                formControlName="precioUnitario"
+              />
+              @if (
+                formularioAdicional.controls.precioUnitario.touched &&
+                formularioAdicional.controls.precioUnitario.invalid
+              ) {
+                <p class="field-error">Ingrese un precio valido.</p>
+              }
+            </div>
+
+            <label class="check-field campo-ancho">
+              <input type="checkbox" formControlName="aprobadoPorCliente" />
+              <span>Aprobado por el cliente</span>
+            </label>
+
+            <label class="check-field campo-ancho">
+              <input type="checkbox" formControlName="cobraArandela" />
+              <span>Cobrar este adicional (si se desmarca, queda como cortesia o garantia)</span>
+            </label>
+          </div>
+        </div>
+
+        <footer class="modal-footer">
+          <button class="btn btn-secondary" type="button" (click)="cerrarAdicional()">Cancelar</button>
+          <button class="btn btn-primary" type="submit" [disabled]="guardandoAdicional()">
+            @if (guardandoAdicional()) {
+              <span class="spinner"></span>
+            }
+            {{ adicionalEditando() ? 'Guardar cambios' : 'Registrar adicional' }}
+          </button>
+        </footer>
+      </form>
+    </div>
+  </div>
+}
+
+@if (modalPago()) {
+  <div class="modal-backdrop" (click)="cerrarPago()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <header class="modal-header">
+        <div>
+          <h2 class="modal-title">Registrar pago</h2>
+          <p class="modal-subtitulo">
+            Saldo pendiente: S/ {{ saldoPendiente() | number: '1.2-2' }}
+          </p>
+        </div>
+        <button class="icon-btn" type="button" (click)="cerrarPago()" aria-label="Cerrar">
+          &times;
+        </button>
+      </header>
+
+      <form [formGroup]="formularioPago" (ngSubmit)="registrarPago()" novalidate>
+        <div class="modal-body">
+          @if (errorPago()) {
+            <div class="alert alert-error">{{ errorPago() }}</div>
+          }
+
+          <div class="form-grid form-grid--2">
+            <div class="field">
+              <label for="montoPago">Monto (S/)</label>
+              <input
+                id="montoPago"
+                class="input"
+                type="number"
+                min="0.01"
+                step="0.01"
+                formControlName="monto"
+              />
+              @if (
+                formularioPago.controls.monto.touched &&
+                formularioPago.controls.monto.invalid
+              ) {
+                <p class="field-error">El monto debe ser mayor a cero.</p>
+              }
+            </div>
+
+            <div class="field">
+              <label for="tipoPago">Tipo de pago</label>
+              <select id="tipoPago" class="select" formControlName="tipoPago">
+                @for (tipo of tiposPago; track tipo.valor) {
+                  <option [value]="tipo.valor">{{ tipo.etiqueta }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="medioPago">Medio de pago</label>
+              <select id="medioPago" class="select" formControlName="medioPago">
+                @for (medio of mediosPago; track medio.valor) {
+                  <option [value]="medio.valor">{{ medio.etiqueta }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="referenciaPago">Referencia (opcional)</label>
+              <input
+                id="referenciaPago"
+                class="input"
+                type="text"
+                maxlength="100"
+                formControlName="referencia"
+                placeholder="Nro. de operacion, voucher..."
+              />
+            </div>
+          </div>
+        </div>
+
+        <footer class="modal-footer">
+          <button class="btn btn-secondary" type="button" (click)="cerrarPago()">Cancelar</button>
+          <button class="btn btn-primary" type="submit" [disabled]="guardandoPago()">
+            @if (guardandoPago()) {
+              <span class="spinner"></span>
+            }
+            Registrar pago
+          </button>
+        </footer>
+      </form>
+    </div>
+  </div>
+}
+
+@if (modalEscaneo()) {
+  <div class="modal-backdrop" (click)="cerrarEscaneo()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <header class="modal-header">
+        <div>
+          <h2 class="modal-title">Escaneos de diagnostico</h2>
+          <p class="modal-subtitulo">
+            @if (continuarTrasEscaneo()) {
+              Registre el escaneo final para poder pasar la orden a LISTO PARA ENTREGA.
+            } @else {
+              Guarde los resultados del escaner inicial y final del vehiculo.
+            }
+          </p>
+        </div>
+        <button class="icon-btn" type="button" (click)="cerrarEscaneo()" aria-label="Cerrar">
+          &times;
+        </button>
+      </header>
+
+      <form [formGroup]="formularioEscaneo" (ngSubmit)="guardarEscaneo()" novalidate>
+        <div class="modal-body">
+          @if (errorEscaneo()) {
+            <div class="alert alert-error">{{ errorEscaneo() }}</div>
+          }
+
+          <div class="form-grid">
+            <div class="field">
+              <label for="escaneoInicial">Escaneo inicial (opcional)</label>
+              <textarea
+                id="escaneoInicial"
+                class="textarea"
+                rows="4"
+                maxlength="10000"
+                formControlName="escaneoInicialResultado"
+                placeholder="Codigos de falla encontrados, lecturas del escaner..."
+              ></textarea>
+            </div>
+
+            <div class="field">
+              <label for="escaneoFinal">
+                Escaneo final
+                @if (continuarTrasEscaneo()) {
+                  <span class="obligatorio">(obligatorio)</span>
+                }
+              </label>
+              <textarea
+                id="escaneoFinal"
+                class="textarea"
+                rows="4"
+                maxlength="10000"
+                formControlName="escaneoFinalResultado"
+                placeholder="Codigos despues del servicio, verificacion de que no quedan fallas..."
+              ></textarea>
+            </div>
+          </div>
+        </div>
+
+        <footer class="modal-footer">
+          <button class="btn btn-secondary" type="button" (click)="cerrarEscaneo()">Cancelar</button>
+          <button class="btn btn-primary" type="submit" [disabled]="guardandoEscaneo()">
+            @if (guardandoEscaneo()) {
+              <span class="spinner"></span>
+            }
+            {{ continuarTrasEscaneo() ? 'Guardar y pasar a LISTO' : 'Guardar escaneos' }}
+          </button>
+        </footer>
+      </form>
+    </div>
+  </div>
+}
+
+@if (aviso()) {
+  <div class="aviso">{{ aviso() }}</div>
+}

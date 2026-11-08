@@ -1,0 +1,275 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <h1 class="page-title">Paquetes de servicio</h1>
+      <p class="page-subtitle">Plantillas de mantenimiento y sus puntos de inspeccion.</p>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-primary" type="button" (click)="abrirNuevo()">Nuevo paquete</button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <div class="alert alert-error">{{ error() }}</div>
+  }
+
+  <section class="card">
+    <div class="toolbar">
+      <input
+        class="input search"
+        type="search"
+        placeholder="Buscar paquete por nombre o combustible..."
+        [value]="busqueda()"
+        (input)="busqueda.set($any($event.target).value)"
+      />
+      <select class="select" [value]="filtro()" (change)="filtro.set($any($event.target).value)">
+        <option value="todos">Todos</option>
+        <option value="activos">Solo activos</option>
+        <option value="inactivos">Solo inactivos</option>
+      </select>
+      <span class="muted">{{ filtrados().length }} paquete(s)</span>
+    </div>
+
+    @if (cargando()) {
+      <div class="cargando">
+        <span class="spinner spinner--oscuro"></span>
+        Cargando paquetes...
+      </div>
+    } @else if (filtrados().length === 0) {
+      <p class="empty">No hay paquetes para los filtros seleccionados.</p>
+    } @else {
+      <div class="card-body lista-paquetes">
+        @for (paquete of filtrados(); track paquete.id) {
+          <article class="paquete" [class.paquete--inactivo]="!paquete.activo">
+            <header class="paquete-cabecera">
+              <div>
+                <h2 class="paquete-nombre">{{ paquete.nombre }}</h2>
+                <p class="muted">
+                  {{ paquete.tipoCombustible }} · {{ paquete.items.length }} punto(s) de inspeccion
+                </p>
+              </div>
+              <span
+                class="badge"
+                [class.badge--entregado]="paquete.activo"
+                [class.badge--cancelado]="!paquete.activo"
+              >
+                {{ paquete.activo ? 'ACTIVO' : 'INACTIVO' }}
+              </span>
+            </header>
+
+            <div class="paquete-meta">
+              <div>
+                <span class="muted">Precio base</span>
+                <strong class="money">S/ {{ paquete.precioBase | number: '1.2-2' }}</strong>
+              </div>
+              <div>
+                <span class="muted">Tiempo estimado</span>
+                <strong>{{ paquete.tiempoEstimadoHoras }} hora(s)</strong>
+              </div>
+              <div>
+                <span class="muted">Garantia</span>
+                <strong>{{ paquete.garantiaKm }} km · {{ paquete.garantiaMeses }} mes(es)</strong>
+              </div>
+            </div>
+
+            <div class="paquete-acciones">
+              <button class="btn btn-secondary btn-sm" type="button" (click)="toggleDetalle(paquete.id)">
+                {{ expandido() === paquete.id ? 'Ocultar puntos' : 'Ver puntos' }}
+              </button>
+              <button class="btn btn-ghost btn-sm" type="button" (click)="abrirEditar(paquete)">
+                Editar
+              </button>
+              <button class="btn btn-danger btn-sm" type="button" (click)="eliminar(paquete)">
+                Eliminar
+              </button>
+            </div>
+
+            @if (expandido() === paquete.id) {
+              <div class="paquete-items">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Categoria</th>
+                      <th>Tarea</th>
+                      <th>Condicional</th>
+                      <th>Ficha tecnica</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (item of itemsOrdenados(paquete); track $index) {
+                      <tr>
+                        <td class="mono">{{ item.ordenVisualizacion }}</td>
+                        <td><span class="badge">{{ item.categoria.replaceAll('_', ' ') }}</span></td>
+                        <td>{{ item.descripcionTarea }}</td>
+                        <td>
+                          @if (item.esCondicional) {
+                            <span class="badge badge--en_proceso">SI</span>
+                          } @else {
+                            <span class="muted">No</span>
+                          }
+                        </td>
+                        <td>
+                          @if (item.requiereFichaTecnica) {
+                            <span class="badge badge--recepcionado">SI</span>
+                          } @else {
+                            <span class="muted">No</span>
+                          }
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </article>
+        }
+      </div>
+    }
+  </section>
+</div>
+
+@if (modalAbierto()) {
+  <div class="modal-backdrop" (click)="cerrarModal()">
+    <div class="modal modal--ancho" (click)="$event.stopPropagation()">
+      <header class="modal-header">
+        <h2 class="modal-title">{{ editando() ? 'Editar paquete' : 'Nuevo paquete' }}</h2>
+        <button class="icon-btn" type="button" (click)="cerrarModal()" aria-label="Cerrar">×</button>
+      </header>
+
+      <form [formGroup]="formulario" (ngSubmit)="guardar()" novalidate>
+        <div class="modal-body">
+          <div class="form-grid form-grid--3">
+            <div class="field campo-ancho">
+              <label for="nombre">Nombre del paquete</label>
+              <input id="nombre" class="input" formControlName="nombre" />
+              @if (formulario.controls.nombre.touched && formulario.controls.nombre.invalid) {
+                <p class="field-error">El nombre es obligatorio.</p>
+              }
+            </div>
+
+            <div class="field">
+              <label for="tipoCombustible">Combustible</label>
+              <select id="tipoCombustible" class="select" formControlName="tipoCombustible">
+                @for (tipo of combustibles; track tipo) {
+                  <option [value]="tipo">{{ tipo }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="precioBase">Precio base (S/)</label>
+              <input id="precioBase" class="input" type="number" step="0.01" formControlName="precioBase" />
+            </div>
+
+            <div class="field">
+              <label for="tiempoEstimadoHoras">Horas estimadas</label>
+              <input id="tiempoEstimadoHoras" class="input" type="number" formControlName="tiempoEstimadoHoras" />
+            </div>
+
+            <div class="field">
+              <label for="garantiaKm">Garantia (km)</label>
+              <input id="garantiaKm" class="input" type="number" formControlName="garantiaKm" />
+            </div>
+
+            <div class="field">
+              <label for="garantiaMeses">Garantia (meses)</label>
+              <input id="garantiaMeses" class="input" type="number" formControlName="garantiaMeses" />
+            </div>
+
+            <label class="check campo-ancho">
+              <input type="checkbox" formControlName="activo" />
+              <span>Paquete activo (disponible para citas y ordenes)</span>
+            </label>
+          </div>
+
+          <div class="editor">
+            <div class="editor-cabecera">
+              <div>
+                <h3>Puntos de inspeccion ({{ items.length }})</h3>
+                <p class="muted">Se copian al crear una orden de trabajo.</p>
+              </div>
+              <button class="btn btn-secondary btn-sm" type="button" (click)="agregarItem()">
+                + Agregar punto
+              </button>
+            </div>
+
+            <div formArrayName="items" class="editor-items">
+              @for (grupo of items.controls; track grupo; let i = $index) {
+                <div class="item-editor" [formGroupName]="i">
+                  <div class="item-cabecera">
+                    <span class="item-numero">{{ i + 1 }}</span>
+                    <button
+                      class="icon-btn"
+                      type="button"
+                      (click)="quitarItem(i)"
+                      [disabled]="items.length <= 1"
+                      aria-label="Quitar punto"
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <div class="form-grid form-grid--3">
+                    <div class="field">
+                      <label [for]="'categoria' + i">Categoria</label>
+                      <select [id]="'categoria' + i" class="select" formControlName="categoria">
+                        @for (categoria of categorias; track categoria) {
+                          <option [value]="categoria">{{ categoria.replaceAll('_', ' ') }}</option>
+                        }
+                      </select>
+                    </div>
+
+                    <div class="field">
+                      <label [for]="'orden' + i">Orden</label>
+                      <input [id]="'orden' + i" class="input" type="number" formControlName="ordenVisualizacion" />
+                    </div>
+
+                    <div class="field campo-ancho">
+                      <label [for]="'descripcion' + i">Descripcion de la tarea</label>
+                      <input
+                        [id]="'descripcion' + i"
+                        class="input"
+                        formControlName="descripcionTarea"
+                      />
+                      @if (
+                        grupo.controls.descripcionTarea.touched &&
+                        grupo.controls.descripcionTarea.invalid
+                      ) {
+                        <p class="field-error">La descripcion es obligatoria.</p>
+                      }
+                    </div>
+
+                    <label class="check">
+                      <input type="checkbox" formControlName="esCondicional" />
+                      <span>Condicional</span>
+                    </label>
+
+                    <label class="check">
+                      <input type="checkbox" formControlName="requiereFichaTecnica" />
+                      <span>Requiere ficha tecnica</span>
+                    </label>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+
+        <footer class="modal-footer">
+          <button class="btn btn-secondary" type="button" (click)="cerrarModal()">Cancelar</button>
+          <button class="btn btn-primary" type="submit" [disabled]="guardando()">
+            @if (guardando()) {
+              <span class="spinner"></span>
+            }
+            {{ editando() ? 'Guardar cambios' : 'Registrar paquete' }}
+          </button>
+        </footer>
+      </form>
+    </div>
+  </div>
+}
+
+@if (aviso()) {
+  <div class="aviso">{{ aviso() }}</div>
+}

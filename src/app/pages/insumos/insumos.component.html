@@ -1,0 +1,194 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <h1 class="page-title">Inventario</h1>
+      <p class="page-subtitle">Control de insumos, stock minimo y valor de inventario.</p>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-primary" type="button" (click)="abrirNuevo()">Nuevo insumo</button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <div class="alert alert-error">{{ error() }}</div>
+  }
+
+  <section class="stat-grid">
+    <article class="stat-card stat-card--azul">
+      <p class="stat-label">Insumos</p>
+      <p class="stat-value">{{ insumos().length }}</p>
+      <p class="stat-hint">Referencias registradas</p>
+    </article>
+    <article class="stat-card stat-card--ambar">
+      <p class="stat-label">Stock critico</p>
+      <p class="stat-value">{{ criticos() }}</p>
+      <p class="stat-hint">En o por debajo del minimo</p>
+    </article>
+    <article class="stat-card stat-card--verde">
+      <p class="stat-label">Valor inventario</p>
+      <p class="stat-value money">S/ {{ valorInventario() | number: '1.2-2' }}</p>
+      <p class="stat-hint">Stock actual por precio de venta</p>
+    </article>
+  </section>
+
+  <section class="card">
+    <div class="toolbar">
+      <input
+        class="input search"
+        type="search"
+        placeholder="Buscar por codigo, nombre o categoria..."
+        [value]="busqueda()"
+        (input)="busqueda.set($any($event.target).value)"
+      />
+      <select
+        class="select"
+        [value]="filtroCategoria()"
+        (change)="filtroCategoria.set($any($event.target).value)"
+      >
+        <option value="">Todas las categorias</option>
+        @for (categoria of categorias; track categoria) {
+          <option [value]="categoria">{{ categoria }}</option>
+        }
+      </select>
+      <label class="check">
+        <input
+          type="checkbox"
+          [checked]="soloCriticos()"
+          (change)="soloCriticos.set($any($event.target).checked)"
+        />
+        <span>Solo stock critico</span>
+      </label>
+      <span class="muted">{{ filtrados().length }} insumo(s)</span>
+    </div>
+
+    @if (cargando()) {
+      <div class="cargando">
+        <span class="spinner spinner--oscuro"></span>
+        Cargando inventario...
+      </div>
+    } @else if (filtrados().length === 0) {
+      <p class="empty">No hay insumos para los filtros seleccionados.</p>
+    } @else {
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Codigo</th>
+              <th>Insumo</th>
+              <th>Categoria</th>
+              <th>Stock</th>
+              <th>Minimo</th>
+              <th class="derecha">Precio venta</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (insumo of filtrados(); track insumo.id) {
+              <tr>
+                <td class="mono codigo">{{ insumo.codigo }}</td>
+                <td>{{ insumo.nombre }}</td>
+                <td><span class="badge">{{ insumo.categoria }}</span></td>
+                <td class="money">{{ insumo.stockActual }}</td>
+                <td class="muted">{{ insumo.stockMinimo }}</td>
+                <td class="derecha money">S/ {{ insumo.precioVenta | number: '1.2-2' }}</td>
+                <td>
+                  @if (esCritico(insumo)) {
+                    <span class="badge badge--cancelado">REPONER</span>
+                  } @else {
+                    <span class="badge badge--entregado">OK</span>
+                  }
+                </td>
+                <td>
+                  <div class="acciones">
+                    <button class="btn btn-ghost btn-sm" type="button" (click)="abrirEditar(insumo)">
+                      Editar
+                    </button>
+                    <button class="btn btn-danger btn-sm" type="button" (click)="eliminar(insumo)">
+                      Eliminar
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</div>
+
+@if (modalAbierto()) {
+  <div class="modal-backdrop" (click)="cerrarModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <header class="modal-header">
+        <h2 class="modal-title">{{ editando() ? 'Editar insumo' : 'Nuevo insumo' }}</h2>
+        <button class="icon-btn" type="button" (click)="cerrarModal()" aria-label="Cerrar">×</button>
+      </header>
+
+      <form [formGroup]="formulario" (ngSubmit)="guardar()" novalidate>
+        <div class="modal-body form-grid form-grid--2">
+          <div class="field">
+            <label for="codigo">Codigo</label>
+            <input id="codigo" class="input" formControlName="codigo" maxlength="30" />
+            @if (formulario.controls.codigo.touched && formulario.controls.codigo.invalid) {
+              <p class="field-error">El codigo es obligatorio.</p>
+            }
+          </div>
+
+          <div class="field">
+            <label for="categoria">Categoria</label>
+            <select id="categoria" class="select" formControlName="categoria">
+              @for (categoria of categorias; track categoria) {
+                <option [value]="categoria">{{ categoria }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="field campo-ancho">
+            <label for="nombre">Nombre</label>
+            <input id="nombre" class="input" formControlName="nombre" />
+            @if (formulario.controls.nombre.touched && formulario.controls.nombre.invalid) {
+              <p class="field-error">El nombre es obligatorio.</p>
+            }
+          </div>
+
+          <div class="field">
+            <label for="stockActual">Stock actual</label>
+            <input id="stockActual" class="input" type="number" formControlName="stockActual" />
+          </div>
+
+          <div class="field">
+            <label for="stockMinimo">Stock minimo</label>
+            <input id="stockMinimo" class="input" type="number" formControlName="stockMinimo" />
+          </div>
+
+          <div class="field campo-ancho">
+            <label for="precioVenta">Precio de venta (S/)</label>
+            <input
+              id="precioVenta"
+              class="input"
+              type="number"
+              step="0.01"
+              formControlName="precioVenta"
+            />
+          </div>
+        </div>
+
+        <footer class="modal-footer">
+          <button class="btn btn-secondary" type="button" (click)="cerrarModal()">Cancelar</button>
+          <button class="btn btn-primary" type="submit" [disabled]="guardando()">
+            @if (guardando()) {
+              <span class="spinner"></span>
+            }
+            {{ editando() ? 'Guardar cambios' : 'Registrar insumo' }}
+          </button>
+        </footer>
+      </form>
+    </div>
+  </div>
+}
+
+@if (aviso()) {
+  <div class="aviso">{{ aviso() }}</div>
+}

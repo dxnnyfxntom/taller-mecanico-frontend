@@ -1,0 +1,163 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <h1 class="page-title">Dashboard</h1>
+      <p class="page-subtitle">Resumen operativo del taller en tiempo real.</p>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-secondary" type="button" (click)="cargar()" [disabled]="cargando()">
+        Actualizar
+      </button>
+      <a class="btn btn-primary" routerLink="/ordenes">Ver ordenes</a>
+    </div>
+  </header>
+
+  @if (error()) {
+    <div class="alert alert-error">{{ error() }}</div>
+  }
+
+  @if (cargando()) {
+    <div class="card cargando">
+      <span class="spinner spinner--oscuro"></span>
+      Cargando indicadores...
+    </div>
+  } @else if (datos(); as d) {
+    <section class="stat-grid">
+      <article class="stat-card stat-card--ambar">
+        <p class="stat-label">Ordenes activas</p>
+        <p class="stat-value">{{ d.ordenesActivas }}</p>
+        <p class="stat-hint">{{ d.ordenesEnProceso }} en proceso · {{ d.ordenesListas }} listas</p>
+      </article>
+
+      <article class="stat-card stat-card--azul">
+        <p class="stat-label">Citas pendientes</p>
+        <p class="stat-value">{{ d.citasPendientes }}</p>
+        <p class="stat-hint">{{ d.citasHoy }} programadas para hoy</p>
+      </article>
+
+      <article class="stat-card stat-card--verde">
+        <p class="stat-label">Ingresos del mes</p>
+        <p class="stat-value money">S/ {{ d.ingresosMes | number: '1.2-2' }}</p>
+        <p class="stat-hint">{{ d.ordenesEntregadasMes }} ordenes entregadas</p>
+      </article>
+
+      <article class="stat-card">
+        <p class="stat-label">Saldo por cobrar</p>
+        <p class="stat-value money">S/ {{ d.saldoPorCobrar | number: '1.2-2' }}</p>
+        <p class="stat-hint">Total historico de ordenes</p>
+      </article>
+    </section>
+
+    <section class="grid-2">
+      <article class="card">
+        <header class="card-header">
+          <h2 class="card-title">Ordenes por estado</h2>
+          <span class="muted">{{ d.totalOrdenes }} en total</span>
+        </header>
+        <div class="card-body barras">
+          @for (item of d.ordenesPorEstado; track item.etiqueta) {
+            <div class="barra-fila">
+              <div class="entre">
+                <span class="barra-etiqueta">{{ item.etiqueta.replaceAll('_', ' ') }}</span>
+                <strong>{{ item.total }}</strong>
+              </div>
+              <div class="progreso">
+                <span [style.width]="porcentaje(item.total)"></span>
+              </div>
+            </div>
+          }
+        </div>
+      </article>
+
+      <article class="card">
+        <header class="card-header">
+          <h2 class="card-title">Alertas y recordatorios</h2>
+          <span class="badge badge--en_proceso">{{ d.recordatoriosPendientes }} pendientes</span>
+        </header>
+        <div class="card-body">
+          @if (d.recordatoriosProximos.length === 0) {
+            <p class="empty">No hay recordatorios proximos.</p>
+          } @else {
+            <ul class="recordatorios">
+              @for (r of d.recordatoriosProximos; track r.informeId) {
+                <li>
+                  <div class="columna">
+                    <strong>{{ r.placa }} · {{ r.marcaModelo }}</strong>
+                    <span class="muted">{{ r.clienteNombre }}</span>
+                  </div>
+                  <div class="columna derecho">
+                    <span class="badge badge--listo_para_entrega">{{ r.motivo }}</span>
+                    <span class="muted">{{ r.diasRestantes }} dias</span>
+                  </div>
+                </li>
+              }
+            </ul>
+          }
+
+          <div class="stock" [class.stock--alerta]="d.insumosStockCritico > 0">
+            <span>Insumos en stock critico</span>
+            <strong>{{ d.insumosStockCritico }}</strong>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="card">
+      <header class="card-header">
+        <h2 class="card-title">Ordenes recientes</h2>
+        <a routerLink="/ordenes">Ver todas</a>
+      </header>
+
+      @if (d.ordenesRecientes.length === 0) {
+        <p class="empty">Todavia no se registraron ordenes de trabajo.</p>
+      } @else {
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Orden</th>
+                <th>Cliente</th>
+                <th>Vehiculo</th>
+                <th>Ingreso</th>
+                <th>Estado</th>
+                <th class="derecha">Total</th>
+                <th>Saldo</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (orden of d.ordenesRecientes; track orden.id) {
+                <tr>
+                  <td>
+                    <a [routerLink]="['/ordenes', orden.id]" class="mono">{{ orden.numeroOrden }}</a>
+                  </td>
+                  <td>
+                    <div class="columna">
+                      <span>{{ orden.clienteNombre }}</span>
+                      <span class="muted">{{ orden.clienteTelefono }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="columna">
+                      <strong>{{ orden.placa }}</strong>
+                      <span class="muted">{{ orden.marcaModelo }}</span>
+                    </div>
+                  </td>
+                  <td>{{ orden.fechaIngreso | date: 'dd/MM/yyyy HH:mm' }}</td>
+                  <td>
+                    <span [class]="claseEstado(orden.estado)">
+                      {{ orden.estado.replaceAll('_', ' ') }}
+                    </span>
+                  </td>
+                  <td class="derecha money">S/ {{ orden.totalOrden | number: '1.2-2' }}</td>
+                  <td class="money" [class.saldo]="orden.saldoPendiente > 0">
+                    S/ {{ orden.saldoPendiente | number: '1.2-2' }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  }
+</div>

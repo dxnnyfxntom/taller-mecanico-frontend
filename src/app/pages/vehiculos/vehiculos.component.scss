@@ -1,0 +1,27 @@
+.placa {
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+  letter-spacing: 0.04em;
+}
+
+.campo-ancho {
+  grid-column: 1 / -1;
+}
+
+.acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.aviso {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 90;
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 12px 18px;
+  border-radius: 10px;
+  box-shadow: var(--sombra-alta);
+  font-weight: 600;
+}

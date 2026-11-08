@@ -1,0 +1,147 @@
+.lista-paquetes {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.paquete {
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  background: var(--superficie);
+  overflow: hidden;
+}
+
+.paquete--inactivo {
+  opacity: 0.75;
+}
+
+.paquete-cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--linea);
+}
+
+.paquete-nombre {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.paquete-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  padding: 16px 18px;
+}
+
+.paquete-meta div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+}
+
+.paquete-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 18px 16px;
+}
+
+.paquete-items {
+  border-top: 1px solid var(--linea);
+  background: var(--fondo-suave);
+}
+
+.paquete-items .table {
+  min-width: 620px;
+}
+
+.campo-ancho {
+  grid-column: 1 / -1;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--tinta-suave);
+  cursor: pointer;
+}
+
+.check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--marca);
+}
+
+.editor {
+  margin-top: 22px;
+  border-top: 1px solid var(--linea);
+  padding-top: 18px;
+}
+
+.editor-cabecera {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.editor-cabecera h3 {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.editor-items {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.item-editor {
+  border: 1px solid var(--linea);
+  border-radius: var(--radio-sm);
+  background: var(--fondo-suave);
+  padding: 12px 14px;
+}
+
+.item-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.item-numero {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--marca-suave);
+  color: var(--marca-oscura);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.aviso {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 90;
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 12px 18px;
+  border-radius: 10px;
+  box-shadow: var(--sombra-alta);
+  font-weight: 600;
+}

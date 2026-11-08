@@ -1,0 +1,199 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <h1 class="page-title">Vehiculos</h1>
+      <p class="page-subtitle">Flota registrada por cliente y estado de kilometraje.</p>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-primary" type="button" (click)="abrirNuevo()">Nuevo vehiculo</button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <div class="alert alert-error">{{ error() }}</div>
+  }
+
+  <section class="card">
+    <div class="toolbar">
+      <input
+        class="input search"
+        type="search"
+        placeholder="Buscar por placa, marca, modelo o cliente..."
+        [value]="busqueda()"
+        (input)="busqueda.set($any($event.target).value)"
+      />
+      <select
+        class="select"
+        [value]="filtroCliente()"
+        (change)="filtroCliente.set(+$any($event.target).value)"
+      >
+        <option value="0">Todos los clientes</option>
+        @for (cliente of clientes(); track cliente.id) {
+          <option [value]="cliente.id">{{ cliente.nombreCompleto }}</option>
+        }
+      </select>
+      <span class="muted">{{ filtrados().length }} vehiculo(s)</span>
+    </div>
+
+    @if (cargando()) {
+      <div class="cargando">
+        <span class="spinner spinner--oscuro"></span>
+        Cargando vehiculos...
+      </div>
+    } @else if (filtrados().length === 0) {
+      <p class="empty">No se encontraron vehiculos con ese criterio.</p>
+    } @else {
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Vehiculo</th>
+              <th>Cliente</th>
+              <th>Año</th>
+              <th>Combustible</th>
+              <th>Kilometraje</th>
+              <th>Color</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (vehiculo of filtrados(); track vehiculo.id) {
+              <tr>
+                <td>
+                  <div class="columna">
+                    <strong class="placa">{{ vehiculo.placa }}</strong>
+                    <span class="muted">{{ vehiculo.marca }} {{ vehiculo.modelo }}</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="columna">
+                    <span>{{ vehiculo.cliente?.nombreCompleto }}</span>
+                    <span class="muted">{{ vehiculo.cliente?.telefonoWhatsapp }}</span>
+                  </div>
+                </td>
+                <td>{{ vehiculo.anio }}</td>
+                <td><span class="badge">{{ vehiculo.tipoCombustible }}</span></td>
+                <td class="money">{{ vehiculo.kilometrajeActual }} km</td>
+                <td class="muted">{{ vehiculo.color || '—' }}</td>
+                <td>
+                  <div class="acciones">
+                    <button class="btn btn-ghost btn-sm" type="button" (click)="abrirEditar(vehiculo)">
+                      Editar
+                    </button>
+                    <button class="btn btn-danger btn-sm" type="button" (click)="eliminar(vehiculo)">
+                      Eliminar
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</div>
+
+@if (modalAbierto()) {
+  <div class="modal-backdrop" (click)="cerrarModal()">
+    <div class="modal modal--ancho" (click)="$event.stopPropagation()">
+      <header class="modal-header">
+        <h2 class="modal-title">{{ editando() ? 'Editar vehiculo' : 'Nuevo vehiculo' }}</h2>
+        <button class="icon-btn" type="button" (click)="cerrarModal()" aria-label="Cerrar">×</button>
+      </header>
+
+      <form [formGroup]="formulario" (ngSubmit)="guardar()" novalidate>
+        <div class="modal-body form-grid form-grid--3">
+          <div class="field campo-ancho">
+            <label for="clienteId">Cliente propietario</label>
+            <select id="clienteId" class="select" formControlName="clienteId">
+              <option [value]="0" disabled>Seleccione un cliente</option>
+              @for (cliente of clientes(); track cliente.id) {
+                <option [value]="cliente.id">
+                  {{ cliente.nombreCompleto }} · {{ cliente.dniRuc }}
+                </option>
+              }
+            </select>
+            @if (
+              formulario.controls.clienteId.touched && formulario.controls.clienteId.invalid
+            ) {
+              <p class="field-error">Seleccione un cliente.</p>
+            }
+          </div>
+
+          <div class="field">
+            <label for="placa">Placa</label>
+            <input id="placa" class="input" formControlName="placa" maxlength="7" placeholder="ABC-123" />
+            @if (formulario.controls.placa.touched && formulario.controls.placa.invalid) {
+              <p class="field-error">Ingresa tres letras, un guion y tres números. Ejemplo ABC-123.</p>
+            }
+          </div>
+
+          <div class="field">
+            <label for="marca">Marca</label>
+            <input id="marca" class="input" formControlName="marca" />
+            @if (formulario.controls.marca.touched && formulario.controls.marca.invalid) {
+              <p class="field-error">La marca es obligatoria.</p>
+            }
+          </div>
+
+          <div class="field">
+            <label for="modelo">Modelo</label>
+            <input id="modelo" class="input" formControlName="modelo" />
+            @if (formulario.controls.modelo.touched && formulario.controls.modelo.invalid) {
+              <p class="field-error">El modelo es obligatorio.</p>
+            }
+          </div>
+
+          <div class="field">
+            <label for="anio">Año</label>
+            <input id="anio" class="input" type="number" formControlName="anio" />
+          </div>
+
+          <div class="field">
+            <label for="tipoCombustible">Combustible</label>
+            <select id="tipoCombustible" class="select" formControlName="tipoCombustible">
+              @for (tipo of combustibles; track tipo) {
+                <option [value]="tipo">{{ tipo }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="kilometrajeActual">Kilometraje actual</label>
+            <input
+              id="kilometrajeActual"
+              class="input"
+              type="number"
+              formControlName="kilometrajeActual"
+            />
+          </div>
+
+          <div class="field">
+            <label for="vinMotor">VIN / Motor</label>
+            <input id="vinMotor" class="input" formControlName="vinMotor" />
+          </div>
+
+          <div class="field">
+            <label for="color">Color</label>
+            <input id="color" class="input" formControlName="color" />
+          </div>
+        </div>
+
+        <footer class="modal-footer">
+          <button class="btn btn-secondary" type="button" (click)="cerrarModal()">Cancelar</button>
+          <button class="btn btn-primary" type="submit" [disabled]="guardando()">
+            @if (guardando()) {
+              <span class="spinner"></span>
+            }
+            {{ editando() ? 'Guardar cambios' : 'Registrar vehiculo' }}
+          </button>
+        </footer>
+      </form>
+    </div>
+  </div>
+}
+
+@if (aviso()) {
+  <div class="aviso">{{ aviso() }}</div>
+}

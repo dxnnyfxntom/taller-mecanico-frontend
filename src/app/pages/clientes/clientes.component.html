@@ -1,0 +1,156 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <h1 class="page-title">Clientes</h1>
+      <p class="page-subtitle">Registro de propietarios y datos de contacto.</p>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-primary" type="button" (click)="abrirNuevo()">Nuevo cliente</button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <div class="alert alert-error">{{ error() }}</div>
+  }
+
+  <section class="card">
+    <div class="toolbar">
+      <input
+        class="input search"
+        type="search"
+        placeholder="Buscar por nombre, DNI/RUC, telefono o correo..."
+        [value]="busqueda()"
+        (input)="busqueda.set($any($event.target).value)"
+      />
+      <span class="muted">{{ filtrados().length }} cliente(s)</span>
+    </div>
+
+    @if (cargando()) {
+      <div class="cargando">
+        <span class="spinner spinner--oscuro"></span>
+        Cargando clientes...
+      </div>
+    } @else if (filtrados().length === 0) {
+      <p class="empty">No se encontraron clientes con ese criterio.</p>
+    } @else {
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>DNI / RUC</th>
+              <th>WhatsApp</th>
+              <th>Correo</th>
+              <th>Direccion</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (cliente of filtrados(); track cliente.id) {
+              <tr>
+                <td>
+                  <div class="fila">
+                    <span class="inicial">{{ cliente.nombreCompleto.charAt(0) }}</span>
+                    <strong>{{ cliente.nombreCompleto }}</strong>
+                  </div>
+                </td>
+                <td class="mono">{{ cliente.dniRuc }}</td>
+                <td>{{ cliente.telefonoWhatsapp }}</td>
+                <td>{{ cliente.correo || '—' }}</td>
+                <td class="muted">{{ cliente.direccion || '—' }}</td>
+                <td>
+                  <div class="acciones">
+                    <button class="btn btn-ghost btn-sm" type="button" (click)="abrirEditar(cliente)">
+                      Editar
+                    </button>
+                    <button class="btn btn-danger btn-sm" type="button" (click)="eliminar(cliente)">
+                      Eliminar
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</div>
+
+@if (modalAbierto()) {
+  <div class="modal-backdrop" (click)="cerrarModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <header class="modal-header">
+        <h2 class="modal-title">{{ editando() ? 'Editar cliente' : 'Nuevo cliente' }}</h2>
+        <button class="icon-btn" type="button" (click)="cerrarModal()" aria-label="Cerrar">×</button>
+      </header>
+
+      <form [formGroup]="formulario" (ngSubmit)="guardar()" novalidate>
+        <div class="modal-body form-grid form-grid--2">
+          <div class="field">
+            <label for="dniRuc">DNI / RUC</label>
+            <input id="dniRuc" class="input" formControlName="dniRuc" inputmode="numeric" />
+            @if (formulario.controls.dniRuc.touched && formulario.controls.dniRuc.invalid) {
+              <p class="field-error">Ingresa un DNI de 8 dígitos o un RUC de 11 dígitos.</p>
+            }
+          </div>
+
+          <div class="field">
+            <label for="nombreCompleto">Nombre completo</label>
+            <input id="nombreCompleto" class="input" formControlName="nombreCompleto" />
+            @if (
+              formulario.controls.nombreCompleto.touched &&
+              formulario.controls.nombreCompleto.invalid
+            ) {
+              <p class="field-error">El nombre debe tener al menos 10 letras y hasta 150 caracteres.</p>
+            }
+          </div>
+
+          <div class="field">
+            <label for="telefonoWhatsapp">WhatsApp</label>
+            <input
+              id="telefonoWhatsapp"
+              class="input"
+              formControlName="telefonoWhatsapp"
+              type="tel"
+              placeholder="987654321"
+            />
+            @if (
+              formulario.controls.telefonoWhatsapp.touched &&
+              formulario.controls.telefonoWhatsapp.invalid
+            ) {
+              <p class="field-error">Ingresa un celular de 9 dígitos que empiece con 9. Puedes incluir +51.</p>
+            }
+          </div>
+
+          <div class="field">
+            <label for="correo">Correo</label>
+            <input id="correo" class="input" type="email" formControlName="correo" />
+            @if (formulario.controls.correo.touched && formulario.controls.correo.invalid) {
+              <p class="field-error">Ingrese un correo valido.</p>
+            }
+          </div>
+
+          <div class="field campo-ancho">
+            <label for="direccion">Direccion</label>
+            <input id="direccion" class="input" formControlName="direccion" />
+          </div>
+        </div>
+
+        <footer class="modal-footer">
+          <button class="btn btn-secondary" type="button" (click)="cerrarModal()">Cancelar</button>
+          <button class="btn btn-primary" type="submit" [disabled]="guardando()">
+            @if (guardando()) {
+              <span class="spinner"></span>
+            }
+            {{ editando() ? 'Guardar cambios' : 'Registrar cliente' }}
+          </button>
+        </footer>
+      </form>
+    </div>
+  </div>
+}
+
+@if (aviso()) {
+  <div class="aviso">{{ aviso() }}</div>
+}
