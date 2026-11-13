@@ -314,6 +314,7 @@ export interface Pago {
 }
 
 export interface PagoPayload {
+  claveOperacion: string;
   monto: number;
   tipoPago: TipoPago;
   medioPago: MedioPago;
@@ -396,6 +397,7 @@ export interface HistorialVisita {
   informeId: number;
   numeroOrden: string;
   fecha: string;
+  clienteNombre: string;
   paquete: string;
   mecanico: string;
   kilometraje: number;

@@ -3,6 +3,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { Mecanico } from '../../models/api.models';
+import { mensajeDeFormulario } from '../../services/error-api';
 import { TallerService } from '../../services/taller.service';
 
 type FiltroActivo = 'todos' | 'activos' | 'inactivos';
@@ -22,6 +23,7 @@ export class MecanicosComponent implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly busqueda = signal('');
   protected readonly filtro = signal<FiltroActivo>('todos');
+  protected readonly errorModal = signal<string | null>(null);
   protected readonly modalAbierto = signal(false);
   protected readonly guardando = signal(false);
   protected readonly editando = signal<Mecanico | null>(null);
@@ -53,9 +55,9 @@ export class MecanicosComponent implements OnInit {
 
   protected readonly formulario = this.fb.nonNullable.group({
     nombreCompleto: ['', [Validators.required, Validators.maxLength(150)]],
-    dni: ['', [Validators.required, Validators.maxLength(20)]],
+    dni: ['', [Validators.required, Validators.pattern(/^\d{8}$/)]],
     especialidad: ['', [Validators.maxLength(100)]],
-    telefono: ['', [Validators.maxLength(20)]],
+    telefono: ['', [Validators.pattern(/^9\d{8}$/)]],
     activo: [true],
   });
 
@@ -87,6 +89,7 @@ export class MecanicosComponent implements OnInit {
       telefono: '',
       activo: true,
     });
+    this.errorModal.set(null);
     this.modalAbierto.set(true);
   }
 
@@ -99,6 +102,7 @@ export class MecanicosComponent implements OnInit {
       telefono: mecanico.telefono ?? '',
       activo: mecanico.activo,
     });
+    this.errorModal.set(null);
     this.modalAbierto.set(true);
   }
 
@@ -122,6 +126,7 @@ export class MecanicosComponent implements OnInit {
       activo: valores.activo,
     };
 
+    this.errorModal.set(null);
     this.guardando.set(true);
     const actual = this.editando();
     const peticion = actual
@@ -138,7 +143,7 @@ export class MecanicosComponent implements OnInit {
       },
       error: (respuesta: HttpErrorResponse) => {
         this.guardando.set(false);
-        this.error.set(respuesta.error?.mensaje ?? 'No se pudo guardar el mecanico.');
+        this.errorModal.set(mensajeDeFormulario(respuesta, 'No se pudo guardar el mecanico.'));
       },
     });
   }

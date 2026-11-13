@@ -118,6 +118,7 @@
 
       <form [formGroup]="formulario" (ngSubmit)="guardar()" novalidate>
         <div class="modal-body form-grid form-grid--2">
+          @if (errorModal()) { <div class="alert alert-error campo-ancho" role="alert">{{ errorModal() }}</div> }
           <div class="field campo-ancho">
             <label for="nombreCompleto">Nombre completo</label>
             <input id="nombreCompleto" class="input" formControlName="nombreCompleto" />

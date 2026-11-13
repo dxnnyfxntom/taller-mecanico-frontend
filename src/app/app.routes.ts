@@ -1,7 +1,7 @@
 import { Routes } from '@angular/router';
 
 import { LayoutComponent } from './components/layout/layout.component';
-import { authGuard, loginGuard } from './services/auth.guard';
+import { adminGuard, authGuard, loginGuard, recepcionGuard } from './services/auth.guard';
 
 export const routes: Routes = [
   {
@@ -18,24 +18,28 @@ export const routes: Routes = [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
       {
         path: 'dashboard',
+        canActivate: [recepcionGuard],
         title: 'Dashboard | Taller Mecanico',
         loadComponent: () =>
           import('./pages/dashboard/dashboard.component').then((m) => m.DashboardComponent),
       },
       {
         path: 'clientes',
+        canActivate: [recepcionGuard],
         title: 'Clientes | Taller Mecanico',
         loadComponent: () =>
           import('./pages/clientes/clientes.component').then((m) => m.ClientesComponent),
       },
       {
         path: 'vehiculos',
+        canActivate: [recepcionGuard],
         title: 'Vehiculos | Taller Mecanico',
         loadComponent: () =>
           import('./pages/vehiculos/vehiculos.component').then((m) => m.VehiculosComponent),
       },
       {
         path: 'citas',
+        canActivate: [recepcionGuard],
         title: 'Citas | Taller Mecanico',
         loadComponent: () => import('./pages/citas/citas.component').then((m) => m.CitasComponent),
       },
@@ -55,24 +59,28 @@ export const routes: Routes = [
       },
       {
         path: 'mecanicos',
+        canActivate: [adminGuard],
         title: 'Mecanicos | Taller Mecanico',
         loadComponent: () =>
           import('./pages/mecanicos/mecanicos.component').then((m) => m.MecanicosComponent),
       },
       {
         path: 'paquetes',
+        canActivate: [adminGuard],
         title: 'Paquetes | Taller Mecanico',
         loadComponent: () =>
           import('./pages/paquetes/paquetes.component').then((m) => m.PaquetesComponent),
       },
       {
         path: 'insumos',
+        canActivate: [adminGuard],
         title: 'Inventario | Taller Mecanico',
         loadComponent: () =>
           import('./pages/insumos/insumos.component').then((m) => m.InsumosComponent),
       },
       {
         path: 'reportes',
+        canActivate: [recepcionGuard],
         title: 'Reportes | Taller Mecanico',
         loadComponent: () =>
           import('./pages/reportes/reportes.component').then((m) => m.ReportesComponent),

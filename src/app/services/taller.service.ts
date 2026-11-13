@@ -8,6 +8,9 @@ import {
   AdicionalPayload,
   CategoriaInsumo,
   Cita,
+  ChecklistItem,
+  Evidencia,
+  NivelCombustible,
   CitaPayload,
   Cliente,
   ClientePayload,
@@ -171,8 +174,14 @@ export class TallerService {
     return this.avisarCambioIndicadores(this.http.post<Insumo>(`${API_URL}/insumos`, datos));
   }
 
-  actualizarInsumo(id: number, datos: InsumoPayload): Observable<Insumo> {
+  actualizarInsumo(id: number, datos: Omit<InsumoPayload, 'stockActual'>): Observable<Insumo> {
     return this.avisarCambioIndicadores(this.http.put<Insumo>(`${API_URL}/insumos/${id}`, datos));
+  }
+
+  ajustarStock(id: number, stockEsperado: number, stockNuevo: number, motivo: string): Observable<Insumo> {
+    return this.avisarCambioIndicadores(
+      this.http.patch<Insumo>(`${API_URL}/insumos/${id}/stock`, { stockEsperado, stockNuevo, motivo }),
+    );
   }
 
   eliminarInsumo(id: number): Observable<void> {
@@ -221,6 +230,61 @@ export class TallerService {
     return this.http.get<InformeResumen[]>(`${API_URL}/informes`, { params });
   }
 
+  crearInforme(datos: {
+    vehiculoId: number;
+    paqueteId: number;
+    mecanicoId: number;
+    kilometrajeIngreso: number;
+    nivelCombustible: NivelCombustible;
+    inventarioRecepcion: string;
+    observacionesRecepcion: string;
+  }): Observable<InformeDetalle> {
+    return this.avisarCambioIndicadores(this.http.post<InformeDetalle>(`${API_URL}/informes`, datos));
+  }
+
+  actualizarInforme(id: number, datos: {
+    mecanicoId: number;
+    kilometrajeIngreso: number;
+    nivelCombustible: NivelCombustible;
+    inventarioRecepcion: string;
+    observacionesRecepcion: string;
+    recomendacionesFuturas: string;
+    observacionesGenerales: string;
+  }): Observable<InformeDetalle> {
+    return this.http.put<InformeDetalle>(`${API_URL}/informes/${id}`, datos);
+  }
+
+  subirEvidencia(id: number, archivo: File, etapa: string, descripcion: string): Observable<Evidencia> {
+    const datos = new FormData();
+    datos.set('archivo', archivo);
+    datos.set('etapa', etapa);
+    datos.set('descripcion', descripcion);
+    return this.http.post<Evidencia>(`${API_URL}/informes/${id}/evidencias`, datos);
+  }
+
+  eliminarEvidencia(id: number): Observable<void> {
+    return this.http.delete<void>(`${API_URL}/evidencias/${id}`);
+  }
+
+  subirFichaTecnica(id: number, archivo: File): Observable<InformeDetalle> {
+    const datos = new FormData();
+    datos.set('archivo', archivo);
+    return this.http.post<InformeDetalle>(`${API_URL}/informes/${id}/ficha-tecnica`, datos);
+  }
+
+  cargarArchivo(ruta: string): Observable<Blob> {
+    return this.http.get(this.urlArchivo(ruta), { responseType: 'blob' });
+  }
+
+  guardarDescarga(archivo: Blob, nombre: string): void {
+    const url = URL.createObjectURL(archivo);
+    const enlace = document.createElement('a');
+    enlace.href = url;
+    enlace.download = nombre;
+    enlace.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
   obtenerInforme(id: number): Observable<InformeDetalle> {
     return this.http.get<InformeDetalle>(`${API_URL}/informes/${id}`);
   }
@@ -239,18 +303,18 @@ export class TallerService {
     informeId: number,
     detalleId: number,
     datos: {
-      estadoComponente: string;
+      estadoComponente?: string;
       accionRealizada: string;
       valorMedido?: string;
       observacionTecnica?: string;
     },
-  ): Observable<unknown> {
-    return this.http.patch(`${API_URL}/informes/${informeId}/checklist/${detalleId}`, datos);
+  ): Observable<ChecklistItem> {
+    return this.http.patch<ChecklistItem>(`${API_URL}/informes/${informeId}/checklist/${detalleId}`, datos);
   }
 
-  registrarConsumo(informeId: number, insumoId: number, cantidad: number): Observable<Consumo> {
+  registrarConsumo(informeId: number, insumoId: number, cantidad: number, claveOperacion: string): Observable<Consumo> {
     return this.avisarCambioIndicadores(
-      this.http.post<Consumo>(`${API_URL}/informes/${informeId}/consumos`, { insumoId, cantidad }),
+      this.http.post<Consumo>(`${API_URL}/informes/${informeId}/consumos`, { insumoId, cantidad, claveOperacion }),
     );
   }
 
@@ -276,7 +340,7 @@ export class TallerService {
   }
 
   registrarPago(informeId: number, datos: PagoPayload): Observable<Pago> {
-    return this.http.post<Pago>(`${API_URL}/informes/${informeId}/pagos`, datos);
+    return this.avisarCambioIndicadores(this.http.post<Pago>(`${API_URL}/informes/${informeId}/pagos`, datos));
   }
 
   eliminarPago(id: number): Observable<void> {

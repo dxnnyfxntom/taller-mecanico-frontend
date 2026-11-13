@@ -5,8 +5,11 @@
       <p class="page-subtitle">Seguimiento del servicio desde el ingreso hasta la entrega.</p>
     </div>
     <div class="page-actions">
-      <a class="btn btn-secondary" routerLink="/citas">Agenda de citas</a>
-      <button class="btn btn-primary" type="button" (click)="cargar()">Actualizar</button>
+      @if (!auth.esMecanico()) {
+        <a class="btn btn-secondary" routerLink="/citas">Agenda de citas</a>
+        <button class="btn btn-primary" type="button" (click)="abrirOrden()">Nueva orden sin cita</button>
+      }
+      <button class="btn btn-secondary" type="button" (click)="cargar()">Actualizar</button>
     </div>
   </header>
 
@@ -95,3 +98,52 @@
     }
   </section>
 </div>
+
+@if (modalOrden()) {
+  <div class="modal-backdrop">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tituloOrden">
+      <header class="modal-header">
+        <h2 id="tituloOrden" class="modal-title">Nueva orden sin cita</h2>
+        <button class="icon-btn" type="button" (click)="modalOrden.set(false)" [disabled]="guardandoOrden()" aria-label="Cerrar">×</button>
+      </header>
+      <form [formGroup]="formularioOrden" (ngSubmit)="crearOrden()">
+        <div class="modal-body form-grid">
+          @if (errorOrden()) { <div class="alert alert-error">{{ errorOrden() }}</div> }
+          <div class="field">
+            <label for="vehiculoOrden">Vehículo</label>
+            <select id="vehiculoOrden" class="select" formControlName="vehiculoId" (change)="seleccionarVehiculo(formularioOrden.controls.vehiculoId.value)">
+              <option [ngValue]="0">Selecciona un vehículo</option>
+              @for (v of vehiculos(); track v.id) { <option [ngValue]="v.id">{{ v.placa }} · {{ v.marca }} {{ v.modelo }}</option> }
+            </select>
+          </div>
+          <div class="field">
+            <label for="paqueteOrden">Paquete</label>
+            <select id="paqueteOrden" class="select" formControlName="paqueteId">
+              <option [ngValue]="0">Selecciona un paquete</option>
+              @for (p of paquetes(); track p.id) { <option [ngValue]="p.id">{{ p.nombre }}</option> }
+            </select>
+          </div>
+          <div class="field">
+            <label for="mecanicoOrden">Mecánico</label>
+            <select id="mecanicoOrden" class="select" formControlName="mecanicoId">
+              <option [ngValue]="0">Selecciona un mecánico</option>
+              @for (m of mecanicos(); track m.id) { <option [ngValue]="m.id">{{ m.nombreCompleto }}</option> }
+            </select>
+          </div>
+          <div class="field"><label for="kmOrden">Kilometraje de ingreso</label><input id="kmOrden" class="input" type="number" min="0" max="10000000" formControlName="kilometrajeIngreso" /></div>
+          <div class="field">
+            <label for="combustibleOrden">Nivel de combustible</label>
+            <select id="combustibleOrden" class="select" formControlName="nivelCombustible">
+              @for (nivel of niveles; track nivel) { <option [value]="nivel">{{ nivel.replaceAll('_', ' ') }}</option> }
+            </select>
+          </div>
+          <div class="field"><label for="inventarioOrden">Inventario de recepción</label><textarea id="inventarioOrden" class="input" formControlName="inventarioRecepcion" maxlength="2000"></textarea></div>
+          <div class="field"><label for="observacionesOrden">Observaciones de recepción</label><textarea id="observacionesOrden" class="input" formControlName="observacionesRecepcion" maxlength="2000"></textarea></div>
+        </div>
+        <footer class="modal-footer">
+          <button class="btn btn-primary" type="submit" [disabled]="formularioOrden.invalid || guardandoOrden()">Registrar orden</button>
+        </footer>
+      </form>
+    </div>
+  </div>
+}

@@ -4,6 +4,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 
 import { Cliente, TipoCombustible, Vehiculo } from '../../models/api.models';
+import { mensajeDeFormulario } from '../../services/error-api';
 import { TallerService } from '../../services/taller.service';
 
 @Component({
@@ -22,6 +23,7 @@ export class VehiculosComponent implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly busqueda = signal('');
   protected readonly filtroCliente = signal(0);
+  protected readonly errorModal = signal<string | null>(null);
   protected readonly modalAbierto = signal(false);
   protected readonly guardando = signal(false);
   protected readonly editando = signal<Vehiculo | null>(null);
@@ -49,12 +51,12 @@ export class VehiculosComponent implements OnInit {
     clienteId: [0, [Validators.required, Validators.min(1)]],
     placa: ['', [Validators.required, Validators.pattern(/^[A-Za-z]{3}-[0-9]{3}$/)]],
     marca: ['', [Validators.required, Validators.maxLength(60)]],
-    modelo: ['', [Validators.required, Validators.maxLength(60)]],
+    modelo: ['', [Validators.required, Validators.maxLength(80)]],
     anio: [2020, [Validators.required, Validators.min(1900), Validators.max(2100)]],
     tipoCombustible: ['GASOLINA' as TipoCombustible, [Validators.required]],
     vinMotor: ['', [Validators.maxLength(60)]],
     color: ['', [Validators.maxLength(40)]],
-    kilometrajeActual: [0, [Validators.required, Validators.min(0)]],
+    kilometrajeActual: [0, [Validators.required, Validators.min(0), Validators.max(10000000), Validators.pattern(/^\d+$/)]],
   });
 
   ngOnInit(): void {
@@ -93,6 +95,7 @@ export class VehiculosComponent implements OnInit {
       color: '',
       kilometrajeActual: 0,
     });
+    this.errorModal.set(null);
     this.modalAbierto.set(true);
   }
 
@@ -109,6 +112,7 @@ export class VehiculosComponent implements OnInit {
       color: vehiculo.color ?? '',
       kilometrajeActual: vehiculo.kilometrajeActual,
     });
+    this.errorModal.set(null);
     this.modalAbierto.set(true);
   }
 
@@ -136,6 +140,7 @@ export class VehiculosComponent implements OnInit {
       kilometrajeActual: Number(valores.kilometrajeActual),
     };
 
+    this.errorModal.set(null);
     this.guardando.set(true);
     const actual = this.editando();
     const peticion = actual
@@ -152,7 +157,7 @@ export class VehiculosComponent implements OnInit {
       },
       error: (respuesta: HttpErrorResponse) => {
         this.guardando.set(false);
-        this.error.set(respuesta.error?.mensaje ?? 'No se pudo guardar el vehiculo.');
+        this.errorModal.set(mensajeDeFormulario(respuesta, 'No se pudo guardar el vehiculo.'));
       },
     });
   }

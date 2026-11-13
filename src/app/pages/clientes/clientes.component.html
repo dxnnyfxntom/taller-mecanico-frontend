@@ -87,9 +87,11 @@
 
       <form [formGroup]="formulario" (ngSubmit)="guardar()" novalidate>
         <div class="modal-body form-grid form-grid--2">
+          @if (errorModal()) { <div role="alert" class="alert alert-error campo-ancho">{{ errorModal() }}</div> }
           <div class="field">
             <label for="dniRuc">DNI / RUC</label>
             <input id="dniRuc" class="input" formControlName="dniRuc" inputmode="numeric" />
+            @if (camposInvalidos()['dniRuc']; as mensaje) { <p class="field-error">{{ mensaje }}</p> }
             @if (formulario.controls.dniRuc.touched && formulario.controls.dniRuc.invalid) {
               <p class="field-error">Ingresa un DNI de 8 dígitos o un RUC de 11 dígitos.</p>
             }
@@ -98,6 +100,7 @@
           <div class="field">
             <label for="nombreCompleto">Nombre completo</label>
             <input id="nombreCompleto" class="input" formControlName="nombreCompleto" />
+            @if (camposInvalidos()['nombreCompleto']; as mensaje) { <p class="field-error">{{ mensaje }}</p> }
             @if (
               formulario.controls.nombreCompleto.touched &&
               formulario.controls.nombreCompleto.invalid
@@ -115,6 +118,7 @@
               type="tel"
               placeholder="987654321"
             />
+            @if (camposInvalidos()['telefonoWhatsapp']; as mensaje) { <p class="field-error">{{ mensaje }}</p> }
             @if (
               formulario.controls.telefonoWhatsapp.touched &&
               formulario.controls.telefonoWhatsapp.invalid
@@ -126,6 +130,7 @@
           <div class="field">
             <label for="correo">Correo</label>
             <input id="correo" class="input" type="email" formControlName="correo" />
+            @if (camposInvalidos()['correo']; as mensaje) { <p class="field-error">{{ mensaje }}</p> }
             @if (formulario.controls.correo.touched && formulario.controls.correo.invalid) {
               <p class="field-error">Ingrese un correo valido.</p>
             }
@@ -134,6 +139,7 @@
           <div class="field campo-ancho">
             <label for="direccion">Direccion</label>
             <input id="direccion" class="input" formControlName="direccion" />
+            @if (camposInvalidos()['direccion']; as mensaje) { <p class="field-error">{{ mensaje }}</p> }
           </div>
         </div>
 

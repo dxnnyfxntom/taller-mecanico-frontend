@@ -9,6 +9,9 @@ import {
   ChecklistItem,
   Consumo,
   EstadoInforme,
+  Evidencia,
+  Mecanico,
+  NivelCombustible,
   InformeDetalle,
   Insumo,
   MedioPago,
@@ -16,15 +19,18 @@ import {
   TipoAdicional,
   TipoPago,
 } from '../../models/api.models';
+import { ImagenEvidenciaComponent } from '../../components/imagen-evidencia/imagen-evidencia.component';
+import { AuthService } from '../../services/auth.service';
 import { TallerService } from '../../services/taller.service';
 
 @Component({
   selector: 'app-orden-detalle',
-  imports: [RouterLink, DatePipe, DecimalPipe, ReactiveFormsModule],
+  imports: [RouterLink, DatePipe, DecimalPipe, ReactiveFormsModule, ImagenEvidenciaComponent],
   templateUrl: './orden-detalle.component.html',
   styleUrl: './orden-detalle.component.scss',
 })
 export class OrdenDetalleComponent implements OnInit {
+  protected readonly auth = inject(AuthService);
   private readonly taller = inject(TallerService);
   private readonly ruta = inject(ActivatedRoute);
   private readonly fb = inject(FormBuilder);
@@ -37,6 +43,20 @@ export class OrdenDetalleComponent implements OnInit {
   protected readonly aviso = signal<string | null>(null);
 
   protected readonly insumos = signal<Insumo[]>([]);
+  private claveConsumo = '';
+  private clavePago = '';
+
+  protected readonly itemChecklist = signal<ChecklistItem | null>(null);
+  protected readonly errorChecklist = signal<string | null>(null);
+  protected readonly formularioChecklist = this.fb.nonNullable.group({
+    accionRealizada: ['', Validators.required],
+    estadoComponente: [''],
+    valorMedido: ['', Validators.maxLength(250)],
+    observacionTecnica: ['', Validators.maxLength(10000)],
+  });
+  protected readonly accionesCondicionales = [
+    'SOLO_VERIFICADO', 'RELLENADO', 'CAMBIADO', 'CALIBRADO', 'NO_REQUERIDO',
+  ];
 
   protected readonly modalConsumo = signal(false);
   protected readonly guardandoConsumo = signal(false);
@@ -51,6 +71,26 @@ export class OrdenDetalleComponent implements OnInit {
   protected readonly guardandoPago = signal(false);
   protected readonly errorPago = signal<string | null>(null);
 
+  protected readonly etapasEvidencia = ['INGRESO', 'DIAGNOSTICO', 'REPARACION', 'ENTREGA'];
+  protected readonly niveles: NivelCombustible[] = ['RESERVA', 'CUARTO', 'MEDIO', 'TRES_CUARTOS', 'LLENO'];
+  protected readonly mecanicos = signal<Mecanico[]>([]);
+  protected readonly modalRecepcion = signal(false);
+  protected readonly errorRecepcion = signal<string | null>(null);
+  protected readonly guardandoArchivo = signal(false);
+  protected readonly formularioEvidencia = this.fb.nonNullable.group({
+    etapa: ['INGRESO'],
+    descripcion: ['', Validators.maxLength(300)],
+  });
+  protected readonly formularioRecepcion = this.fb.nonNullable.group({
+    mecanicoId: [0, Validators.min(1)],
+    kilometrajeIngreso: [0, [Validators.required, Validators.min(0), Validators.max(10000000), Validators.pattern(/^\d+$/)]],
+    nivelCombustible: ['MEDIO' as NivelCombustible, Validators.required],
+    inventarioRecepcion: ['', Validators.maxLength(2000)],
+    observacionesRecepcion: ['', Validators.maxLength(2000)],
+    recomendacionesFuturas: ['', Validators.maxLength(10000)],
+    observacionesGenerales: ['', Validators.maxLength(10000)],
+  });
+
   protected readonly modalEscaneo = signal(false);
   protected readonly guardandoEscaneo = signal(false);
   protected readonly errorEscaneo = signal<string | null>(null);
@@ -58,7 +98,7 @@ export class OrdenDetalleComponent implements OnInit {
 
   protected readonly completados = computed(
     () =>
-      this.informe()?.checklist.filter((item) => item.accionRealizada === 'COMPLETADO').length ?? 0,
+      this.informe()?.checklist.filter((item) => this.resultadoRegistrado(item)).length ?? 0,
   );
 
   protected readonly totalItems = computed(() => this.informe()?.checklist.length ?? 0);
@@ -145,6 +185,7 @@ export class OrdenDetalleComponent implements OnInit {
   }
 
   protected siguienteEstado(): EstadoInforme | null {
+    if (this.auth.esMecanico()) return null;
     switch (this.informe()?.estado) {
       case 'RECEPCIONADO':
         return 'EN_PROCESO';
@@ -173,7 +214,9 @@ export class OrdenDetalleComponent implements OnInit {
 
     if (
       siguiente === 'ENTREGADO' &&
-      !confirm('Registrar la entrega del vehiculo? La orden quedara cerrada.')
+      !confirm(this.saldoPendiente() > 0
+        ? `¿Entregar el vehículo con S/ ${this.saldoPendiente().toFixed(2)} pendientes de cobro?`
+        : '¿Registrar la entrega del vehículo?')
     ) {
       return;
     }
@@ -197,25 +240,67 @@ export class OrdenDetalleComponent implements OnInit {
     });
   }
 
-  protected completar(item: ChecklistItem): void {
+  protected accionesChecklist(item: ChecklistItem): string[] {
+    return item.esCondicional && item.categoria !== 'CORTESIA'
+      ? this.accionesCondicionales
+      : ['COMPLETADO'];
+  }
+
+  protected resultadoRegistrado(item: ChecklistItem): boolean {
+    return this.accionesChecklist(item).includes(item.accionRealizada ?? '')
+      && (item.accionRealizada === 'NO_REQUERIDO' || !!item.estadoComponente);
+  }
+
+  protected abrirChecklist(item: ChecklistItem): void {
+    this.errorChecklist.set(null);
+    this.formularioChecklist.reset({
+      accionRealizada: this.accionesChecklist(item).includes(item.accionRealizada ?? '')
+        ? item.accionRealizada! : '',
+      estadoComponente: item.estadoComponente ?? '',
+      valorMedido: item.valorMedido ?? '',
+      observacionTecnica: item.observacionTecnica ?? '',
+    });
+    this.itemChecklist.set(item);
+  }
+
+  protected cerrarChecklist(): void {
+    if (!this.procesando()) this.itemChecklist.set(null);
+  }
+
+  protected guardarChecklist(item: ChecklistItem): void {
+    if (this.procesando() || this.formularioChecklist.invalid) return;
+    const datos = this.formularioChecklist.getRawValue();
+    if (datos.accionRealizada !== 'NO_REQUERIDO' && !datos.estadoComponente) {
+      this.errorChecklist.set('Selecciona el estado observado del componente.');
+      return;
+    }
     this.procesando.set(true);
-    this.taller
-      .actualizarChecklist(this.id, item.id, {
-        estadoComponente: item.estadoComponente || 'OPTIMO',
-        accionRealizada: 'COMPLETADO',
-        valorMedido: item.valorMedido || 'OK',
-        observacionTecnica: item.observacionTecnica || 'Completado desde el panel',
-      })
-      .subscribe({
-        next: () => {
-          this.procesando.set(false);
-          this.refrescar();
-        },
-        error: (respuesta: HttpErrorResponse) => {
-          this.procesando.set(false);
-          this.error.set(respuesta.error?.mensaje ?? 'No se pudo actualizar el checklist.');
-        },
-      });
+    this.errorChecklist.set(null);
+    this.taller.actualizarChecklist(this.id, item.id, {
+      ...datos,
+      estadoComponente: datos.accionRealizada === 'NO_REQUERIDO' ? undefined : datos.estadoComponente,
+    }).subscribe({
+      next: (actualizado) => {
+        this.procesando.set(false);
+        this.itemChecklist.set(null);
+        this.informe.update((orden) => orden && {
+          ...orden,
+          checklist: orden.checklist.map((punto) => punto.id === actualizado.id ? actualizado : punto),
+        });
+      },
+      error: (respuesta: HttpErrorResponse) => {
+        this.procesando.set(false);
+        this.errorChecklist.set(respuesta.error?.mensaje ?? 'No se pudo guardar el resultado.');
+      },
+    });
+  }
+
+  protected cancelarOrden(): void {
+    if (confirm('¿Cancelar la orden y reponer los insumos consumidos?')) this.aplicarEstado('CANCELADO');
+  }
+
+  protected volverAProceso(): void {
+    this.aplicarEstado('EN_PROCESO');
   }
 
   // ---------- Consumos ----------
@@ -223,19 +308,17 @@ export class OrdenDetalleComponent implements OnInit {
   protected abrirConsumo(): void {
     this.errorConsumo.set(null);
 
-    if (this.insumos().length === 0) {
-      this.taller.insumos().subscribe({
-        next: (insumos) => {
-          this.insumos.set(insumos);
-          this.prepararFormularioConsumo();
-        },
-        error: () => this.errorConsumo.set('No se pudo cargar el catalogo de insumos.'),
-      });
-    } else {
-      this.prepararFormularioConsumo();
-    }
-
+    this.claveConsumo = crypto.randomUUID();
+    this.insumos.set([]);
+    this.formularioConsumo.reset({ insumoId: 0, cantidad: 1 });
     this.modalConsumo.set(true);
+    this.taller.insumos().subscribe({
+      next: (insumos) => {
+        this.insumos.set(insumos);
+        this.prepararFormularioConsumo();
+      },
+      error: () => this.errorConsumo.set('No se pudo cargar el catálogo de insumos.'),
+    });
   }
 
   private prepararFormularioConsumo(): void {
@@ -250,7 +333,7 @@ export class OrdenDetalleComponent implements OnInit {
   }
 
   protected registrarConsumo(): void {
-    if (this.formularioConsumo.invalid) {
+    if (this.guardandoConsumo() || this.formularioConsumo.invalid) {
       this.formularioConsumo.markAllAsTouched();
       return;
     }
@@ -259,6 +342,10 @@ export class OrdenDetalleComponent implements OnInit {
     const insumo = this.insumos().find((item) => item.id === Number(valores.insumoId));
     if (!insumo) {
       this.errorConsumo.set('Seleccione un insumo valido.');
+      return;
+    }
+    if (!Number.isInteger(valores.cantidad)) {
+      this.errorConsumo.set('Ingrese una cantidad en unidades enteras.');
       return;
     }
     if (Number(valores.cantidad) > insumo.stockActual) {
@@ -270,7 +357,7 @@ export class OrdenDetalleComponent implements OnInit {
 
     this.errorConsumo.set(null);
     this.guardandoConsumo.set(true);
-    this.taller.registrarConsumo(this.id, insumo.id, Number(valores.cantidad)).subscribe({
+    this.taller.registrarConsumo(this.id, insumo.id, Number(valores.cantidad), this.claveConsumo).subscribe({
       next: () => {
         this.guardandoConsumo.set(false);
         this.modalConsumo.set(false);
@@ -417,6 +504,7 @@ export class OrdenDetalleComponent implements OnInit {
 
   protected abrirPago(): void {
     this.errorPago.set(null);
+    this.clavePago = crypto.randomUUID();
     const saldo = this.saldoPendiente();
     this.formularioPago.reset({
       monto: saldo > 0 ? saldo : 0,
@@ -434,13 +522,17 @@ export class OrdenDetalleComponent implements OnInit {
   }
 
   protected registrarPago(): void {
-    if (this.formularioPago.invalid) {
+    if (this.guardandoPago() || this.formularioPago.invalid) {
       this.formularioPago.markAllAsTouched();
       return;
     }
 
     const valores = this.formularioPago.getRawValue();
     const monto = Number(valores.monto);
+    if (!/^\d{1,8}(\.\d{1,2})?$/.test(String(monto))) {
+      this.errorPago.set("Ingrese un monto con hasta dos decimales.");
+      return;
+    }
     const saldo = this.saldoPendiente();
     if (monto > saldo) {
       this.errorPago.set(`El monto excede el saldo pendiente de S/ ${saldo.toFixed(2)}.`);
@@ -451,6 +543,7 @@ export class OrdenDetalleComponent implements OnInit {
     this.guardandoPago.set(true);
     this.taller
       .registrarPago(this.id, {
+        claveOperacion: this.clavePago,
         monto,
         tipoPago: valores.tipoPago,
         medioPago: valores.medioPago,
@@ -486,6 +579,115 @@ export class OrdenDetalleComponent implements OnInit {
         this.error.set(respuesta.error?.mensaje ?? 'No se pudo anular el pago.');
       },
     });
+  }
+
+  protected abrirRecepcion(orden: InformeDetalle): void {
+    this.errorRecepcion.set(null);
+    this.formularioRecepcion.reset({
+      mecanicoId: orden.mecanico.id,
+      kilometrajeIngreso: orden.kilometrajeIngreso,
+      nivelCombustible: orden.nivelCombustible,
+      inventarioRecepcion: orden.inventarioRecepcion ?? '',
+      observacionesRecepcion: orden.observacionesRecepcion ?? '',
+      recomendacionesFuturas: orden.recomendacionesFuturas ?? '',
+      observacionesGenerales: orden.observacionesGenerales ?? '',
+    });
+    this.mecanicos.set([orden.mecanico]);
+    this.modalRecepcion.set(true);
+    this.taller.mecanicos(true).subscribe({
+      next: (mecanicos) => this.mecanicos.set(mecanicos.some(m => m.id === orden.mecanico.id)
+        ? mecanicos : [orden.mecanico, ...mecanicos]),
+      error: () => this.errorRecepcion.set('No se pudo cargar la lista de mecánicos.'),
+    });
+  }
+
+  protected guardarRecepcion(): void {
+    if (this.procesando() || this.formularioRecepcion.invalid) return;
+    this.errorRecepcion.set(null);
+    this.procesando.set(true);
+    const datos = this.formularioRecepcion.getRawValue();
+    this.taller.actualizarInforme(this.id, { ...datos, mecanicoId: Number(datos.mecanicoId) }).subscribe({
+      next: (orden) => {
+        this.procesando.set(false);
+        this.informe.set(orden);
+        this.modalRecepcion.set(false);
+        this.mostrarAviso('Datos de recepción actualizados.');
+      },
+      error: (respuesta: HttpErrorResponse) => {
+        this.procesando.set(false);
+        this.errorRecepcion.set(respuesta.error?.mensaje ?? 'No se pudo actualizar la recepción.');
+      },
+    });
+  }
+
+  protected subirEvidencia(input: HTMLInputElement): void {
+    const archivo = input.files?.[0];
+    if (!archivo || this.formularioEvidencia.invalid || this.guardandoArchivo()) return;
+    this.guardandoArchivo.set(true);
+    this.error.set(null);
+    const { etapa, descripcion } = this.formularioEvidencia.getRawValue();
+    this.taller.subirEvidencia(this.id, archivo, etapa, descripcion.trim()).subscribe({
+      next: (evidencia) => {
+        this.guardandoArchivo.set(false);
+        input.value = '';
+        this.formularioEvidencia.controls.descripcion.reset();
+        this.informe.update((orden) => orden && { ...orden, evidencias: [evidencia, ...orden.evidencias] });
+        this.mostrarAviso('Evidencia guardada.');
+      },
+      error: (respuesta: HttpErrorResponse) => this.errorArchivo(respuesta),
+    });
+  }
+
+  protected eliminarEvidencia(evidencia: Evidencia): void {
+    if (this.guardandoArchivo() || !confirm('¿Eliminar esta evidencia?')) return;
+    this.guardandoArchivo.set(true);
+    this.taller.eliminarEvidencia(evidencia.id).subscribe({
+      next: () => {
+        this.guardandoArchivo.set(false);
+        this.informe.update((orden) => orden && {
+          ...orden, evidencias: orden.evidencias.filter(e => e.id !== evidencia.id),
+        });
+      },
+      error: (respuesta: HttpErrorResponse) => this.errorArchivo(respuesta),
+    });
+  }
+
+  protected subirFicha(input: HTMLInputElement): void {
+    const archivo = input.files?.[0];
+    if (!archivo || this.guardandoArchivo()) return;
+    this.guardandoArchivo.set(true);
+    this.error.set(null);
+    this.taller.subirFichaTecnica(this.id, archivo).subscribe({
+      next: (orden) => {
+        this.guardandoArchivo.set(false);
+        this.informe.set(orden);
+        input.value = '';
+        this.mostrarAviso('Ficha técnica guardada.');
+      },
+      error: (respuesta: HttpErrorResponse) => this.errorArchivo(respuesta),
+    });
+  }
+
+  protected descargarFicha(ruta: string): void {
+    this.taller.cargarArchivo(ruta).subscribe({
+      next: (archivo) => this.taller.guardarDescarga(archivo, 'ficha-tecnica.pdf'),
+      error: () => this.error.set('No se pudo descargar la ficha técnica.'),
+    });
+  }
+
+  protected descargarInforme(): void {
+    this.taller.reporte(this.id).subscribe({
+      next: (informe) => this.taller.guardarDescarga(
+        new Blob([JSON.stringify(informe, null, 2)], { type: 'application/json' }),
+        (this.informe()?.numeroOrden ?? 'informe') + '.json',
+      ),
+      error: () => this.error.set('No se pudo descargar el informe.'),
+    });
+  }
+
+  private errorArchivo(respuesta: HttpErrorResponse): void {
+    this.guardandoArchivo.set(false);
+    this.error.set(respuesta.error?.mensaje ?? 'No se pudo completar la operación con el archivo.');
   }
 
   // ---------- Escaneos ----------

@@ -1,0 +1,62 @@
+:host {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--linea);
+  border-radius: var(--radio-sm);
+  background: var(--superficie);
+  color: var(--tinta-suave);
+  cursor: pointer;
+  transition:
+    background var(--transicion),
+    color var(--transicion);
+}
+
+button:hover {
+  background: var(--fondo-suave);
+  color: var(--marca-oscura);
+}
+
+button:focus-visible {
+  outline: 2px solid var(--focus-ring, var(--marca-oscura));
+  outline-offset: 3px;
+}
+
+.luna {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  box-shadow: -4px 3px currentColor;
+  transform: translate(2px, -2px);
+}
+
+.sol {
+  position: relative;
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+}
+
+.sol::before,
+.sol::after {
+  content: '';
+  position: absolute;
+  inset: -7px;
+  background:
+    linear-gradient(currentColor, currentColor) top / 1.5px 3px no-repeat,
+    linear-gradient(currentColor, currentColor) bottom / 1.5px 3px no-repeat,
+    linear-gradient(currentColor, currentColor) left / 3px 1.5px no-repeat,
+    linear-gradient(currentColor, currentColor) right / 3px 1.5px no-repeat;
+}
+
+.sol::after {
+  transform: rotate(45deg);
+}

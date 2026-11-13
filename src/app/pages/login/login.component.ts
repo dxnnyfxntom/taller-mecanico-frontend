@@ -3,11 +3,12 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 
+import { TemaToggleComponent } from '../../components/tema-toggle/tema-toggle.component';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-login',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, TemaToggleComponent],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
 })
@@ -36,7 +37,7 @@ export class LoginComponent {
 
     this.auth.login(this.formulario.getRawValue()).subscribe({
       next: () => {
-        void this.router.navigate(['/dashboard']);
+        void this.router.navigate([this.auth.esMecanico() ? '/ordenes' : '/dashboard']);
       },
       error: (respuesta: HttpErrorResponse) => {
         this.error.set(

@@ -8,7 +8,7 @@
       <button class="btn btn-secondary" type="button" (click)="cargar()" [disabled]="cargando()">
         Actualizar
       </button>
-      <a class="btn btn-primary" routerLink="/ordenes">Ver ordenes</a>
+      <a class="btn btn-primary" routerLink="/ordenes">Ver órdenes</a>
     </div>
   </header>
 
@@ -24,7 +24,7 @@
   } @else if (datos(); as d) {
     <section class="stat-grid">
       <article class="stat-card stat-card--ambar">
-        <p class="stat-label">Ordenes activas</p>
+        <p class="stat-label">Órdenes activas</p>
         <p class="stat-value">{{ d.ordenesActivas }}</p>
         <p class="stat-hint">{{ d.ordenesEnProceso }} en proceso · {{ d.ordenesListas }} listas</p>
       </article>
@@ -38,20 +38,20 @@
       <article class="stat-card stat-card--verde">
         <p class="stat-label">Ingresos del mes</p>
         <p class="stat-value money">S/ {{ d.ingresosMes | number: '1.2-2' }}</p>
-        <p class="stat-hint">{{ d.ordenesEntregadasMes }} ordenes entregadas</p>
+        <p class="stat-hint">{{ d.ordenesEntregadasMes }} órdenes entregadas</p>
       </article>
 
       <article class="stat-card">
         <p class="stat-label">Saldo por cobrar</p>
         <p class="stat-value money">S/ {{ d.saldoPorCobrar | number: '1.2-2' }}</p>
-        <p class="stat-hint">Total historico de ordenes</p>
+        <p class="stat-hint">Total histórico de órdenes</p>
       </article>
     </section>
 
     <section class="grid-2">
       <article class="card">
         <header class="card-header">
-          <h2 class="card-title">Ordenes por estado</h2>
+          <h2 class="card-title">Órdenes por estado</h2>
           <span class="muted">{{ d.totalOrdenes }} en total</span>
         </header>
         <div class="card-body barras">
@@ -76,7 +76,7 @@
         </header>
         <div class="card-body">
           @if (d.recordatoriosProximos.length === 0) {
-            <p class="empty">No hay recordatorios proximos.</p>
+            <p class="empty">No hay recordatorios próximos.</p>
           } @else {
             <ul class="recordatorios">
               @for (r of d.recordatoriosProximos; track r.informeId) {
@@ -87,7 +87,7 @@
                   </div>
                   <div class="columna derecho">
                     <span class="badge badge--listo_para_entrega">{{ r.motivo }}</span>
-                    <span class="muted">{{ r.diasRestantes }} dias</span>
+                    <span class="muted">{{ r.diasRestantes }} días</span>
                   </div>
                 </li>
               }
@@ -95,7 +95,7 @@
           }
 
           <div class="stock" [class.stock--alerta]="d.insumosStockCritico > 0">
-            <span>Insumos en stock critico</span>
+            <span>Insumos en stock crítico</span>
             <strong>{{ d.insumosStockCritico }}</strong>
           </div>
         </div>
@@ -104,12 +104,12 @@
 
     <section class="card">
       <header class="card-header">
-        <h2 class="card-title">Ordenes recientes</h2>
+        <h2 class="card-title">Órdenes recientes</h2>
         <a routerLink="/ordenes">Ver todas</a>
       </header>
 
       @if (d.ordenesRecientes.length === 0) {
-        <p class="empty">Todavia no se registraron ordenes de trabajo.</p>
+        <p class="empty">Todavía no se registraron órdenes de trabajo.</p>
       } @else {
         <div class="table-wrap">
           <table class="table">
@@ -117,7 +117,7 @@
               <tr>
                 <th>Orden</th>
                 <th>Cliente</th>
-                <th>Vehiculo</th>
+                <th>Vehículo</th>
                 <th>Ingreso</th>
                 <th>Estado</th>
                 <th class="derecha">Total</th>

@@ -104,6 +104,7 @@
 
       <form [formGroup]="formulario" (ngSubmit)="guardar()" novalidate>
         <div class="modal-body form-grid form-grid--3">
+          @if (errorModal()) { <div class="alert alert-error campo-ancho" role="alert">{{ errorModal() }}</div> }
           <div class="field campo-ancho">
             <label for="clienteId">Cliente propietario</label>
             <select id="clienteId" class="select" formControlName="clienteId">

@@ -7,6 +7,7 @@ import { Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
 import { Cita, Cliente, EstadoCita, Mecanico, NivelCombustible, Paquete, Vehiculo } from '../../models/api.models';
+import { mensajeDeFormulario } from '../../services/error-api';
 import { TallerService } from '../../services/taller.service';
 
 @Component({
@@ -30,6 +31,7 @@ export class CitasComponent implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly busqueda = signal('');
   protected readonly filtroEstado = signal<'' | EstadoCita>('');
+  protected readonly errorModal = signal<string | null>(null);
   protected readonly modalAbierto = signal(false);
   protected readonly guardando = signal(false);
   protected readonly aviso = signal<string | null>(null);
@@ -80,7 +82,7 @@ export class CitasComponent implements OnInit {
 
   protected readonly formularioConversion = this.fb.nonNullable.group({
     mecanicoId: [0, [Validators.required, Validators.min(1)]],
-    kilometrajeIngreso: [0, [Validators.required, Validators.min(0)]],
+    kilometrajeIngreso: [0, [Validators.required, Validators.min(0), Validators.max(10000000), Validators.pattern(/^\d+$/)]],
     nivelCombustible: ['MEDIO' as NivelCombustible, [Validators.required]],
     inventarioRecepcion: ['', [Validators.maxLength(2000)]],
     observacionesRecepcion: ['', [Validators.maxLength(2000)]],
@@ -135,6 +137,7 @@ export class CitasComponent implements OnInit {
       observaciones: '',
     });
     this.vehiculosCliente.set([]);
+    this.errorModal.set(null);
     this.modalAbierto.set(true);
   }
 
@@ -221,6 +224,7 @@ export class CitasComponent implements OnInit {
       ? `${valores.fechaHoraInicio}:00`
       : valores.fechaHoraInicio;
 
+    this.errorModal.set(null);
     this.guardando.set(true);
     this.taller
       .crearCita({
@@ -240,13 +244,17 @@ export class CitasComponent implements OnInit {
         },
         error: (respuesta: HttpErrorResponse) => {
           this.guardando.set(false);
-          this.error.set(respuesta.error?.mensaje ?? 'No se pudo registrar la cita.');
+          this.errorModal.set(mensajeDeFormulario(respuesta, 'No se pudo registrar la cita.'));
         },
       });
   }
 
   protected confirmar(cita: Cita): void {
     this.cambiarEstado(cita, 'CONFIRMADA');
+  }
+
+  protected reactivar(cita: Cita): void {
+    this.cambiarEstado(cita, 'PENDIENTE');
   }
 
   protected cancelar(cita: Cita): void {

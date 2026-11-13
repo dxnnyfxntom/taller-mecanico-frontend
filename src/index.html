@@ -7,6 +7,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#0b1220" />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <script>
+      let temaGuardado;
+      try {
+        temaGuardado = localStorage.getItem('taller-tema');
+      } catch {
+        // El navegador puede bloquear el almacenamiento local.
+      }
+      document.documentElement.dataset.theme =
+        temaGuardado === 'dark' || temaGuardado === 'light'
+          ? temaGuardado
+          : window.matchMedia?.('(prefers-color-scheme: dark)').matches
+            ? 'dark'
+            : 'light';
+    </script>
   </head>
   <body>
     <app-root></app-root>

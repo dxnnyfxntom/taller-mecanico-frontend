@@ -1,6 +1,7 @@
 .placa {
   font-family: 'Cascadia Code', 'Consolas', monospace;
   letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
 .campo-ancho {
@@ -13,6 +14,10 @@
   align-items: center;
   gap: 4px;
   flex-wrap: wrap;
+}
+
+.acciones-titulo {
+  text-align: right;
 }
 
 .badge-link {
@@ -35,10 +40,93 @@
   right: 22px;
   bottom: 22px;
   z-index: 90;
-  background: #0f172a;
-  color: #f8fafc;
+  background: var(--aviso-fondo);
+  color: var(--aviso-tinta);
   padding: 12px 18px;
   border-radius: 10px;
   box-shadow: var(--sombra-alta);
   font-weight: 600;
+}
+
+@media (max-width: 720px) {
+  .tabla-citas,
+  .tabla-citas tbody {
+    display: block;
+    min-width: 0;
+  }
+
+  .tabla-citas thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .tabla-citas tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      'fecha estado'
+      'cliente vehiculo'
+      'paquete paquete'
+      'acciones acciones';
+    align-items: start;
+    gap: 10px 16px;
+    padding: 15px;
+    border-bottom: 1px solid var(--linea);
+  }
+
+  .tabla-citas tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  .tabla-citas tbody td {
+    min-width: 0;
+    padding: 0;
+    border: none;
+  }
+
+  .cita-fecha {
+    grid-area: fecha;
+    align-self: center;
+  }
+
+  .cita-fecha .columna {
+    flex-flow: row wrap;
+    align-items: baseline;
+    gap: 2px 7px;
+  }
+
+  .cita-cliente {
+    grid-area: cliente;
+    overflow-wrap: anywhere;
+  }
+
+  .cita-vehiculo {
+    grid-area: vehiculo;
+    overflow-wrap: anywhere;
+  }
+
+  .cita-paquete {
+    grid-area: paquete;
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .cita-estado {
+    grid-area: estado;
+    justify-self: end;
+  }
+
+  .tabla-citas tbody .cita-acciones {
+    grid-area: acciones;
+    padding-top: 10px;
+    border-top: 1px solid var(--linea);
+  }
+
+  .cita-acciones .acciones {
+    justify-content: flex-start;
+  }
 }

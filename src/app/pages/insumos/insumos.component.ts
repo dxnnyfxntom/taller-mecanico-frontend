@@ -26,6 +26,12 @@ export class InsumosComponent implements OnInit {
   protected readonly guardando = signal(false);
   protected readonly editando = signal<Insumo | null>(null);
   protected readonly aviso = signal<string | null>(null);
+  protected readonly insumoAjuste = signal<Insumo | null>(null);
+  protected readonly errorModal = signal<string | null>(null);
+  protected readonly formularioAjuste = this.fb.nonNullable.group({
+    stockNuevo: [0, [Validators.required, Validators.min(0), Validators.max(2147483647), Validators.pattern(/^\d+$/)]],
+    motivo: ['', [Validators.required, Validators.maxLength(250)]],
+  });
 
   protected readonly categorias: CategoriaInsumo[] = [
     'ACEITE',
@@ -102,6 +108,7 @@ export class InsumosComponent implements OnInit {
       stockMinimo: 0,
       precioVenta: 0,
     });
+    this.errorModal.set(null);
     this.modalAbierto.set(true);
   }
 
@@ -115,10 +122,12 @@ export class InsumosComponent implements OnInit {
       stockMinimo: insumo.stockMinimo,
       precioVenta: insumo.precioVenta,
     });
+    this.errorModal.set(null);
     this.modalAbierto.set(true);
   }
 
   protected cerrarModal(): void {
+    if (this.guardando()) return;
     this.modalAbierto.set(false);
     this.editando.set(null);
   }
@@ -139,11 +148,18 @@ export class InsumosComponent implements OnInit {
       precioVenta: Number(valores.precioVenta),
     };
 
+    if (!Number.isInteger(datos.stockActual) || !Number.isInteger(datos.stockMinimo)
+        || !/^\d{1,8}(\.\d{1,2})?$/.test(String(datos.precioVenta))) {
+      this.errorModal.set('Ingrese existencias en unidades enteras y un precio con hasta dos decimales.');
+      return;
+    }
+    this.errorModal.set(null);
     this.guardando.set(true);
     const actual = this.editando();
+    const { stockActual, ...catalogo } = datos;
     const peticion = actual
-      ? this.taller.actualizarInsumo(actual.id, datos)
-      : this.taller.crearInsumo(datos);
+      ? this.taller.actualizarInsumo(actual.id, catalogo)
+      : this.taller.crearInsumo({ ...catalogo, stockActual });
 
     peticion.subscribe({
       next: () => {
@@ -155,7 +171,40 @@ export class InsumosComponent implements OnInit {
       },
       error: (respuesta: HttpErrorResponse) => {
         this.guardando.set(false);
-        this.error.set(respuesta.error?.mensaje ?? 'No se pudo guardar el insumo.');
+        this.errorModal.set(respuesta.error?.mensaje ?? 'No se pudo guardar el insumo.');
+      },
+    });
+  }
+
+  protected abrirAjuste(insumo: Insumo): void {
+    this.errorModal.set(null);
+    this.formularioAjuste.reset({ stockNuevo: insumo.stockActual, motivo: '' });
+    this.insumoAjuste.set(insumo);
+  }
+
+  protected cerrarAjuste(): void {
+    if (!this.guardando()) this.insumoAjuste.set(null);
+  }
+
+  protected ajustarStock(insumo: Insumo): void {
+    if (this.guardando() || this.formularioAjuste.invalid) return;
+    const { stockNuevo, motivo } = this.formularioAjuste.getRawValue();
+    if (!motivo.trim()) {
+      this.errorModal.set('Indique el motivo del ajuste.');
+      return;
+    }
+    this.guardando.set(true);
+    this.errorModal.set(null);
+    this.taller.ajustarStock(insumo.id, insumo.stockActual, stockNuevo, motivo.trim()).subscribe({
+      next: (actualizado) => {
+        this.guardando.set(false);
+        this.cerrarAjuste();
+        this.insumos.update(insumos => insumos.map(i => i.id === actualizado.id ? actualizado : i));
+      },
+      error: (respuesta: HttpErrorResponse) => {
+        this.guardando.set(false);
+        this.errorModal.set(respuesta.error?.mensaje ?? 'No se pudo ajustar el stock.');
+        this.cargar();
       },
     });
   }

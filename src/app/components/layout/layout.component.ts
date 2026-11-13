@@ -5,6 +5,7 @@ import { EMPTY, catchError, startWith, switchMap } from 'rxjs';
 
 import { AuthService } from '../../services/auth.service';
 import { TallerService } from '../../services/taller.service';
+import { TemaToggleComponent } from '../tema-toggle/tema-toggle.component';
 
 interface GrupoNav {
   titulo: string;
@@ -18,7 +19,7 @@ interface GrupoNav {
 
 @Component({
   selector: 'app-layout',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, TemaToggleComponent],
   templateUrl: './layout.component.html',
   styleUrl: './layout.component.scss',
 })
@@ -30,7 +31,7 @@ export class LayoutComponent {
   protected readonly indicadores = toSignal(
     this.taller.cambiosIndicadores.pipe(
       startWith(undefined),
-      switchMap(() => this.taller.dashboard().pipe(catchError(() => EMPTY))),
+      switchMap(() => this.auth.esMecanico() ? EMPTY : this.taller.dashboard().pipe(catchError(() => EMPTY))),
     ),
   );
 
@@ -94,6 +95,16 @@ export class LayoutComponent {
       ],
     },
   ];
+
+  protected readonly gruposVisibles = computed(() => this.grupos
+    .map((grupo) => ({
+      ...grupo,
+      enlaces: grupo.enlaces.filter(({ ruta }) => {
+        if (this.auth.esMecanico()) return ruta === '/ordenes';
+        return this.auth.esAdmin() || !['/mecanicos', '/paquetes', '/insumos'].includes(ruta);
+      }),
+    }))
+    .filter(grupo => grupo.enlaces.length > 0));
 
   protected readonly iniciales = computed(() => {
     const nombre = this.auth.usuario()?.nombreCompleto ?? 'Usuario';

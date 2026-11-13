@@ -10,6 +10,7 @@ import {
   PlantillaItem,
   TipoCombustible,
 } from '../../models/api.models';
+import { mensajeDeFormulario } from '../../services/error-api';
 import { TallerService } from '../../services/taller.service';
 
 type FiltroActivo = 'todos' | 'activos' | 'inactivos';
@@ -30,6 +31,7 @@ export class PaquetesComponent implements OnInit {
   protected readonly busqueda = signal('');
   protected readonly filtro = signal<FiltroActivo>('todos');
   protected readonly expandido = signal<number | null>(null);
+  protected readonly errorModal = signal<string | null>(null);
   protected readonly modalAbierto = signal(false);
   protected readonly guardando = signal(false);
   protected readonly editando = signal<Paquete | null>(null);
@@ -118,6 +120,7 @@ export class PaquetesComponent implements OnInit {
     });
     this.items.clear();
     this.items.push(this.crearItemFormulario(1));
+    this.errorModal.set(null);
     this.modalAbierto.set(true);
   }
 
@@ -151,6 +154,7 @@ export class PaquetesComponent implements OnInit {
       });
     }
 
+    this.errorModal.set(null);
     this.modalAbierto.set(true);
   }
 
@@ -194,6 +198,7 @@ export class PaquetesComponent implements OnInit {
       })),
     };
 
+    this.errorModal.set(null);
     this.guardando.set(true);
     const actual = this.editando();
     const peticion = actual
@@ -210,7 +215,7 @@ export class PaquetesComponent implements OnInit {
       },
       error: (respuesta: HttpErrorResponse) => {
         this.guardando.set(false);
-        this.error.set(respuesta.error?.mensaje ?? 'No se pudo guardar el paquete.');
+        this.errorModal.set(mensajeDeFormulario(respuesta, 'No se pudo guardar el paquete.'));
       },
     });
   }

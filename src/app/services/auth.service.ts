@@ -17,6 +17,8 @@ export class AuthService {
   readonly token = signal<string | null>(localStorage.getItem(TOKEN_KEY));
   readonly usuario = signal<Usuario | null>(this.leerUsuario());
   readonly autenticado = computed(() => !!this.token());
+  readonly esMecanico = computed(() => this.usuario()?.rol === 'MECANICO');
+  readonly esAdmin = computed(() => this.usuario()?.rol === 'ADMIN');
   readonly inicializando = signal(true);
 
   login(credenciales: LoginRequest): Observable<LoginResponse> {

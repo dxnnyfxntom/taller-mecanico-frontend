@@ -18,6 +18,8 @@ export class ClientesComponent implements OnInit {
   protected readonly clientes = signal<Cliente[]>([]);
   protected readonly cargando = signal(true);
   protected readonly error = signal<string | null>(null);
+  protected readonly errorModal = signal<string | null>(null);
+  protected readonly camposInvalidos = signal<Record<string, string>>({});
   protected readonly busqueda = signal('');
   protected readonly modalAbierto = signal(false);
   protected readonly guardando = signal(false);
@@ -44,7 +46,7 @@ export class ClientesComponent implements OnInit {
       [Validators.required, Validators.maxLength(150), Validators.pattern(/^(?:\P{L}*\p{L}){10}/u)],
     ],
     telefonoWhatsapp: ['', [Validators.required, Validators.pattern(/^(?:\+?51)?9[0-9]{8}$/)]],
-    correo: ['', [Validators.email]],
+    correo: ['', [Validators.email, Validators.maxLength(120)]],
     direccion: ['', [Validators.maxLength(200)]],
   });
 
@@ -76,6 +78,8 @@ export class ClientesComponent implements OnInit {
       correo: '',
       direccion: '',
     });
+    this.errorModal.set(null);
+    this.camposInvalidos.set({});
     this.modalAbierto.set(true);
   }
 
@@ -88,6 +92,8 @@ export class ClientesComponent implements OnInit {
       correo: cliente.correo ?? '',
       direccion: cliente.direccion ?? '',
     });
+    this.errorModal.set(null);
+    this.camposInvalidos.set({});
     this.modalAbierto.set(true);
   }
 
@@ -103,6 +109,8 @@ export class ClientesComponent implements OnInit {
     }
 
     this.guardando.set(true);
+    this.errorModal.set(null);
+    this.camposInvalidos.set({});
     const datos = this.formulario.getRawValue();
     const actual = this.editando();
 
@@ -120,7 +128,11 @@ export class ClientesComponent implements OnInit {
       },
       error: (respuesta: HttpErrorResponse) => {
         this.guardando.set(false);
-        this.error.set(respuesta.error?.mensaje ?? 'No se pudo guardar el cliente.');
+        const mensaje = respuesta.error?.mensaje ?? 'No se pudo guardar el cliente.';
+        const campos = respuesta.error?.campos ?? {};
+        if (mensaje.includes('DNI/RUC')) campos.dniRuc = mensaje;
+        this.camposInvalidos.set(campos);
+        this.errorModal.set(mensaje);
       },
     });
   }

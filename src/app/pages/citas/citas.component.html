@@ -2,7 +2,7 @@
   <header class="page-header">
     <div>
       <h1 class="page-title">Citas</h1>
-      <p class="page-subtitle">Agenda de recepcion y control de capacidad del taller.</p>
+      <p class="page-subtitle">Programa la recepción de vehículos y consulta el cupo del taller.</p>
     </div>
     <div class="page-actions">
       <button class="btn btn-primary" type="button" (click)="abrirNueva()">Nueva cita</button>
@@ -18,12 +18,14 @@
       <input
         class="input search"
         type="search"
+        aria-label="Buscar citas"
         placeholder="Buscar por cliente, placa o paquete..."
         [value]="busqueda()"
         (input)="busqueda.set($any($event.target).value)"
       />
       <select
         class="select"
+        aria-label="Filtrar citas por estado"
         [value]="filtroEstado()"
         (change)="filtroEstado.set($any($event.target).value)"
       >
@@ -32,7 +34,7 @@
           <option [value]="estado">{{ estado.replaceAll('_', ' ') }}</option>
         }
       </select>
-      <span class="muted">{{ filtradas().length }} cita(s)</span>
+      <span class="muted">{{ filtradas().length }} {{ filtradas().length === 1 ? 'cita' : 'citas' }}</span>
     </div>
 
     @if (cargando()) {
@@ -44,45 +46,45 @@
       <p class="empty">No hay citas para los filtros seleccionados.</p>
     } @else {
       <div class="table-wrap">
-        <table class="table">
+        <table class="table tabla-citas" role="table">
           <thead>
             <tr>
               <th>Fecha programada</th>
               <th>Cliente</th>
-              <th>Vehiculo</th>
+              <th>Vehículo</th>
               <th>Paquete</th>
               <th>Estado</th>
-              <th></th>
+              <th class="acciones-titulo">Acciones</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody role="rowgroup">
             @for (cita of filtradas(); track cita.id) {
-              <tr>
-                <td>
+              <tr role="row">
+                <td class="cita-fecha" role="cell">
                   <div class="columna">
                     <strong>{{ cita.fechaHoraInicio | date: 'dd/MM/yyyy' }}</strong>
                     <span class="muted">{{ cita.fechaHoraInicio | date: 'HH:mm' }} hrs</span>
                   </div>
                 </td>
-                <td>
+                <td class="cita-cliente" role="cell">
                   <div class="columna">
                     <span>{{ cita.clienteNombre }}</span>
                     <span class="muted">{{ cita.clienteTelefono }}</span>
                   </div>
                 </td>
-                <td>
+                <td class="cita-vehiculo" role="cell">
                   <div class="columna">
                     <strong class="placa">{{ cita.placa }}</strong>
                     <span class="muted">{{ cita.marcaModelo }}</span>
                   </div>
                 </td>
-                <td>{{ cita.paqueteNombre }}</td>
-                <td>
+                <td class="cita-paquete" role="cell">{{ cita.paqueteNombre }}</td>
+                <td class="cita-estado" role="cell">
                   <span [class]="claseEstado(cita.estadoCita)">
                     {{ cita.estadoCita.replaceAll('_', ' ') }}
                   </span>
                 </td>
-                <td>
+                <td class="cita-acciones" role="cell">
                   <div class="acciones">
                     @if (!cita.informeId && cita.estadoCita !== 'CANCELADA') {
                       <button class="btn btn-primary btn-sm" type="button" (click)="abrirConversion(cita)">
@@ -98,6 +100,9 @@
                       <button class="btn btn-ghost btn-sm" type="button" (click)="cancelar(cita)">
                         Cancelar
                       </button>
+                    }
+                    @if (!cita.informeId && cita.estadoCita === 'CANCELADA') {
+                      <button class="btn btn-secondary btn-sm" type="button" (click)="reactivar(cita)">Reactivar</button>
                     }
                     @if (!cita.informeId) {
                       <button class="btn btn-danger btn-sm" type="button" (click)="eliminar(cita)">
@@ -133,6 +138,7 @@
 
       <form [formGroup]="formulario" (ngSubmit)="guardar()" novalidate>
         <div class="modal-body form-grid form-grid--2">
+          @if (errorModal()) { <div class="alert alert-error campo-ancho" role="alert">{{ errorModal() }}</div> }
           <div class="field">
             <label for="clienteId">Cliente</label>
             <select id="clienteId" class="select" formControlName="clienteId">

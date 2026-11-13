@@ -16,6 +16,12 @@
     @if (informe(); as i) {
       <div class="page-actions">
         <span [class]="claseEstado(i.estado)">{{ i.estado.replaceAll('_', ' ') }}</span>
+        @if (!auth.esMecanico() && (i.estado === 'RECEPCIONADO' || i.estado === 'EN_PROCESO')) {
+          <button class="btn btn-danger" type="button" (click)="cancelarOrden()" [disabled]="procesando()">Cancelar orden</button>
+        }
+        @if (!auth.esMecanico() && i.estado === 'LISTO_PARA_ENTREGA') {
+          <button class="btn btn-secondary" type="button" (click)="volverAProceso()" [disabled]="procesando()">Volver a proceso</button>
+        }
         @if (siguienteEstado(); as siguiente) {
           <button class="btn btn-primary" type="button" (click)="avanzar()" [disabled]="procesando()">
             @if (procesando()) {
@@ -42,6 +48,12 @@
       <article class="card">
         <header class="card-header">
           <h2 class="card-title">Datos del servicio</h2>
+          @if (editable() && !auth.esMecanico()) {
+            <button class="btn btn-secondary btn-sm" type="button" (click)="abrirRecepcion(i)">Editar recepción</button>
+          }
+          @if (!auth.esMecanico()) {
+            <button class="btn btn-secondary btn-sm" type="button" (click)="descargarInforme()">Descargar informe (JSON)</button>
+          }
           <span class="muted">{{ i.paquete.nombre }}</span>
         </header>
         <div class="card-body datos">
@@ -72,7 +84,7 @@
 
     <section class="card">
       <header class="card-header">
-        <h2 class="card-title">Checklist de 19 puntos</h2>
+        <h2 class="card-title">Checklist del servicio</h2>
         <span class="muted">{{ completados() }} / {{ totalItems() }} completados</span>
       </header>
       <div class="card-body">
@@ -83,8 +95,8 @@
 
         <ul class="checklist">
           @for (item of i.checklist; track item.id) {
-            <li [class.listo]="item.accionRealizada === 'COMPLETADO'">
-              <div class="check-marca">{{ item.accionRealizada === 'COMPLETADO' ? '✓' : '' }}</div>
+            <li [class.listo]="resultadoRegistrado(item)">
+              <div class="check-marca">{{ resultadoRegistrado(item) ? '✓' : '' }}</div>
               <div class="check-info">
                 <div class="fila">
                   <span class="badge">{{ item.categoria.replaceAll('_', ' ') }}</span>
@@ -95,12 +107,13 @@
                 <strong>{{ item.descripcionTarea }}</strong>
                 <span class="muted">
                   {{ item.accionRealizada || 'PENDIENTE' }}
+                  @if (item.estadoComponente) { · {{ item.estadoComponente }} }
                   @if (item.valorMedido) { · {{ item.valorMedido }} }
                 </span>
               </div>
-              @if (item.accionRealizada !== 'COMPLETADO') {
-                <button class="btn btn-secondary btn-sm" type="button" (click)="completar(item)" [disabled]="procesando()">
-                  Completar
+              @if (editable()) {
+                <button class="btn btn-secondary btn-sm" type="button" (click)="abrirChecklist(item)" [disabled]="procesando()">
+                  {{ resultadoRegistrado(item) ? 'Editar resultado' : 'Registrar resultado' }}
                 </button>
               }
             </li>
@@ -204,7 +217,7 @@
           <h2 class="card-title">Adicionales</h2>
           <div class="card-tools">
             <span class="muted">{{ i.adicionales.length }}</span>
-            @if (editable()) {
+            @if (editable() && !auth.esMecanico()) {
               <button class="btn btn-secondary btn-sm" type="button" (click)="abrirAdicional()">
                 + Agregar
               </button>
@@ -222,7 +235,7 @@
                   <th>Tipo</th>
                   <th>Aprobado</th>
                   <th class="derecha">Subtotal</th>
-                  @if (editable()) {
+                  @if (editable() && !auth.esMecanico()) {
                     <th class="derecha">Acciones</th>
                   }
                 </tr>
@@ -238,7 +251,7 @@
                       </span>
                     </td>
                     <td class="derecha money">S/ {{ a.subtotal | number: '1.2-2' }}</td>
-                    @if (editable()) {
+                    @if (editable() && !auth.esMecanico()) {
                       <td>
                         <div class="acciones">
                           @if (a.aprobadoPorCliente) {
@@ -274,7 +287,7 @@
           <h2 class="card-title">Pagos</h2>
           <div class="card-tools">
             <span class="muted">{{ i.pagos.length }}</span>
-            @if (editable() && i.totales.saldoPendiente > 0) {
+            @if (!auth.esMecanico() && i.estado !== 'CANCELADO' && i.totales.saldoPendiente > 0) {
               <button class="btn btn-secondary btn-sm" type="button" (click)="abrirPago()">
                 + Agregar
               </button>
@@ -292,7 +305,7 @@
                   <th>Tipo</th>
                   <th>Medio</th>
                   <th class="derecha">Monto</th>
-                  @if (editable()) {
+                  @if (editable() && !auth.esMecanico()) {
                     <th class="derecha">Acciones</th>
                   }
                 </tr>
@@ -304,7 +317,7 @@
                     <td>{{ p.tipoPago }}</td>
                     <td>{{ p.medioPago }}</td>
                     <td class="derecha money">S/ {{ p.monto | number: '1.2-2' }}</td>
-                    @if (editable()) {
+                    @if (editable() && !auth.esMecanico()) {
                       <td>
                         <div class="acciones">
                           <button class="btn btn-danger btn-sm" type="button" (click)="eliminarPago(p)" [disabled]="procesando()">
@@ -327,13 +340,45 @@
           <span class="muted">{{ i.evidencias.length }}</span>
         </header>
         <div class="card-body">
+          @if (i.fichaTecnicaPdfUrl; as ficha) {
+            <button class="btn btn-secondary btn-sm" type="button" (click)="descargarFicha(ficha)">Descargar ficha técnica</button>
+          }
+          @if (editable()) {
+            <div class="field">
+              <label for="archivoFicha">Ficha técnica (PDF)</label>
+              <input #archivoFicha id="archivoFicha" type="file" class="input" accept=".pdf,application/pdf" />
+              <button class="btn btn-secondary btn-sm" type="button" (click)="subirFicha(archivoFicha)" [disabled]="guardandoArchivo()">Guardar ficha</button>
+            </div>
+            <form [formGroup]="formularioEvidencia" (ngSubmit)="subirEvidencia(archivoEvidencia)" class="form-grid">
+              <div class="field">
+                <label for="archivoEvidencia">Fotografía</label>
+                <input #archivoEvidencia id="archivoEvidencia" type="file" class="input" accept=".jpg,.jpeg,.png,.webp" required />
+              </div>
+              <div class="field">
+                <label for="etapaEvidencia">Etapa</label>
+                <select id="etapaEvidencia" formControlName="etapa" class="select">
+                  @for (etapa of etapasEvidencia; track etapa) {
+                    <option [value]="etapa">{{ etapa }}</option>
+                  }
+                </select>
+              </div>
+              <div class="field">
+                <label for="descripcionEvidencia">Descripción</label>
+                <input id="descripcionEvidencia" class="input" formControlName="descripcion" maxlength="300" />
+              </div>
+              <button class="btn btn-secondary btn-sm" type="submit" [disabled]="guardandoArchivo() || formularioEvidencia.invalid">Adjuntar foto</button>
+            </form>
+          }
           @if (i.evidencias.length === 0) {
             <p class="empty">Sin evidencias fotograficas.</p>
           } @else {
             <div class="evidencias">
               @for (e of i.evidencias; track e.id) {
                 <figure>
-                  <img [src]="taller.urlArchivo(e.urlImagen)" [alt]="e.descripcionFoto || 'Evidencia'" />
+                  <app-imagen-evidencia [ruta]="e.urlImagen" [descripcion]="e.descripcionFoto || 'Evidencia'" />
+                  @if (editable()) {
+                    <button class="btn btn-danger btn-sm" type="button" (click)="eliminarEvidencia(e)" [disabled]="guardandoArchivo()">Eliminar foto</button>
+                  }
                   <figcaption>{{ e.etapa }}</figcaption>
                 </figure>
               }
@@ -344,6 +389,93 @@
     </section>
   }
 </div>
+
+@if (modalRecepcion()) {
+  <div class="modal-backdrop">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tituloRecepcion">
+      <header class="modal-header">
+        <h2 id="tituloRecepcion" class="modal-title">Editar recepción</h2>
+        <button class="icon-btn" type="button" (click)="modalRecepcion.set(false)" [disabled]="procesando()" aria-label="Cerrar">×</button>
+      </header>
+      <form [formGroup]="formularioRecepcion" (ngSubmit)="guardarRecepcion()">
+        <div class="modal-body form-grid">
+          @if (errorRecepcion()) { <div class="alert alert-error">{{ errorRecepcion() }}</div> }
+          <div class="field">
+            <label for="mecanicoRecepcion">Mecánico</label>
+            <select id="mecanicoRecepcion" class="select" formControlName="mecanicoId">
+              @for (m of mecanicos(); track m.id) { <option [ngValue]="m.id">{{ m.nombreCompleto }}</option> }
+            </select>
+          </div>
+          <div class="field">
+            <label for="kmRecepcion">Kilometraje de ingreso</label>
+            <input id="kmRecepcion" class="input" type="number" min="0" max="10000000" formControlName="kilometrajeIngreso" />
+          </div>
+          <div class="field">
+            <label for="combustibleRecepcion">Nivel de combustible</label>
+            <select id="combustibleRecepcion" class="select" formControlName="nivelCombustible">
+              @for (nivel of niveles; track nivel) { <option [value]="nivel">{{ nivel.replaceAll('_', ' ') }}</option> }
+            </select>
+          </div>
+          <div class="field"><label for="inventarioRecepcion">Inventario de recepción</label><textarea id="inventarioRecepcion" class="input" formControlName="inventarioRecepcion" maxlength="2000"></textarea></div>
+          <div class="field"><label for="observacionesRecepcion">Observaciones de recepción</label><textarea id="observacionesRecepcion" class="input" formControlName="observacionesRecepcion" maxlength="2000"></textarea></div>
+          <div class="field"><label for="recomendaciones">Recomendaciones futuras</label><textarea id="recomendaciones" class="input" formControlName="recomendacionesFuturas" maxlength="10000"></textarea></div>
+          <div class="field"><label for="observacionesGenerales">Observaciones generales</label><textarea id="observacionesGenerales" class="input" formControlName="observacionesGenerales" maxlength="10000"></textarea></div>
+        </div>
+        <footer class="modal-footer">
+          <button class="btn btn-primary" type="submit" [disabled]="formularioRecepcion.invalid || procesando()">Guardar recepción</button>
+        </footer>
+      </form>
+    </div>
+  </div>
+}
+
+@if (itemChecklist(); as item) {
+  <div class="modal-backdrop" (click)="cerrarChecklist()">
+    <div class="modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="tituloChecklist">
+      <header class="modal-header">
+        <h2 id="tituloChecklist" class="modal-title">{{ item.descripcionTarea }}</h2>
+        <button class="icon-btn" type="button" (click)="cerrarChecklist()" aria-label="Cerrar">×</button>
+      </header>
+      <form [formGroup]="formularioChecklist" (ngSubmit)="guardarChecklist(item)">
+        <div class="modal-body form-grid">
+          @if (errorChecklist()) { <div class="alert alert-error">{{ errorChecklist() }}</div> }
+          <div class="field">
+            <label for="accionChecklist">Acción realizada</label>
+            <select id="accionChecklist" class="select" formControlName="accionRealizada">
+              <option value="">Selecciona una acción</option>
+              @for (accion of accionesChecklist(item); track accion) {
+                <option [value]="accion">{{ accion.replaceAll('_', ' ') }}</option>
+              }
+            </select>
+          </div>
+          @if (formularioChecklist.controls.accionRealizada.value !== 'NO_REQUERIDO') {
+            <div class="field">
+              <label for="estadoChecklist">Estado observado</label>
+              <select id="estadoChecklist" class="select" formControlName="estadoComponente">
+                <option value="">Selecciona un estado</option>
+                <option value="OPTIMO">Óptimo</option>
+                <option value="ATENCION">Requiere atención</option>
+                <option value="CRITICO">Crítico</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="valorChecklist">Medición</label>
+              <input id="valorChecklist" class="input" formControlName="valorMedido" maxlength="250" />
+            </div>
+          }
+          <div class="field">
+            <label for="observacionChecklist">Observación técnica</label>
+            <textarea id="observacionChecklist" class="input" formControlName="observacionTecnica" maxlength="10000"></textarea>
+          </div>
+        </div>
+        <footer class="modal-footer">
+          <button class="btn btn-secondary" type="button" (click)="cerrarChecklist()">Cancelar</button>
+          <button class="btn btn-primary" type="submit" [disabled]="formularioChecklist.invalid || procesando()">Guardar resultado</button>
+        </footer>
+      </form>
+    </div>
+  </div>
+}
 
 @if (modalConsumo()) {
   <div class="modal-backdrop" (click)="cerrarConsumo()">

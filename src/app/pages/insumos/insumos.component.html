@@ -104,6 +104,7 @@
                     <button class="btn btn-ghost btn-sm" type="button" (click)="abrirEditar(insumo)">
                       Editar
                     </button>
+                    <button class="btn btn-secondary btn-sm" type="button" (click)="abrirAjuste(insumo)">Ajustar stock</button>
                     <button class="btn btn-danger btn-sm" type="button" (click)="eliminar(insumo)">
                       Eliminar
                     </button>
@@ -128,6 +129,7 @@
 
       <form [formGroup]="formulario" (ngSubmit)="guardar()" novalidate>
         <div class="modal-body form-grid form-grid--2">
+          @if (errorModal()) { <div class="alert alert-error campo-ancho">{{ errorModal() }}</div> }
           <div class="field">
             <label for="codigo">Codigo</label>
             <input id="codigo" class="input" formControlName="codigo" maxlength="30" />
@@ -153,10 +155,12 @@
             }
           </div>
 
-          <div class="field">
-            <label for="stockActual">Stock actual</label>
-            <input id="stockActual" class="input" type="number" formControlName="stockActual" />
-          </div>
+          @if (!editando()) {
+            <div class="field">
+              <label for="stockActual">Stock inicial</label>
+              <input id="stockActual" class="input" type="number" min="0" formControlName="stockActual" />
+            </div>
+          }
 
           <div class="field">
             <label for="stockMinimo">Stock minimo</label>
@@ -183,6 +187,29 @@
             }
             {{ editando() ? 'Guardar cambios' : 'Registrar insumo' }}
           </button>
+        </footer>
+      </form>
+    </div>
+  </div>
+}
+
+@if (insumoAjuste(); as insumo) {
+  <div class="modal-backdrop" (click)="cerrarAjuste()">
+    <div class="modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="tituloAjuste">
+      <header class="modal-header">
+        <h2 id="tituloAjuste" class="modal-title">Ajustar stock de {{ insumo.nombre }}</h2>
+        <button class="icon-btn" type="button" (click)="cerrarAjuste()" aria-label="Cerrar">×</button>
+      </header>
+      <form [formGroup]="formularioAjuste" (ngSubmit)="ajustarStock(insumo)">
+        <div class="modal-body form-grid">
+          @if (errorModal()) { <div class="alert alert-error">{{ errorModal() }}</div> }
+          <p>Stock actual de {{ insumo.stockActual }} unidades</p>
+          <div class="field"><label for="stockNuevo">Stock nuevo</label><input id="stockNuevo" class="input" type="number" min="0" formControlName="stockNuevo" /></div>
+          <div class="field"><label for="motivoAjuste">Motivo</label><input id="motivoAjuste" class="input" formControlName="motivo" maxlength="250" /></div>
+        </div>
+        <footer class="modal-footer">
+          <button class="btn btn-secondary" type="button" (click)="cerrarAjuste()">Cancelar</button>
+          <button class="btn btn-primary" type="submit" [disabled]="guardando() || formularioAjuste.invalid">Guardar ajuste</button>
         </footer>
       </form>
     </div>

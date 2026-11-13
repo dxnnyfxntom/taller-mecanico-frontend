@@ -3,7 +3,7 @@ import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 
-import { API_URL } from './api.config';
+import { API_URL, UPLOADS_URL } from './api.config';
 import { AuthService } from './auth.service';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
@@ -11,7 +11,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
   const token = auth.token();
 
-  const peticion = token && req.url.startsWith(API_URL)
+  const peticion = token && (req.url.startsWith(`${API_URL}/`) || req.url.startsWith(`${UPLOADS_URL}/uploads/`))
     ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
     : req;
 

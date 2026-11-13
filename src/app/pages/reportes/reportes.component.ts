@@ -123,6 +123,13 @@ export class ReportesComponent implements OnInit {
     });
   }
 
+  protected descargarFicha(ruta: string): void {
+    this.taller.cargarArchivo(ruta).subscribe({
+      next: (archivo) => this.taller.guardarDescarga(archivo, 'ficha-tecnica.pdf'),
+      error: () => this.errorHistorial.set('No se pudo descargar la ficha técnica.'),
+    });
+  }
+
   protected claseEstado(estado: string): string {
     return `badge badge--${estado.toLowerCase()}`;
   }

@@ -77,7 +77,7 @@
       <section class="grid-2">
         <article class="card">
           <header class="card-header">
-            <h2 class="card-title">Cliente</h2>
+            <h2 class="card-title">Propietario actual</h2>
           </header>
           <div class="card-body datos">
             <div><span class="muted">Nombre</span><strong>{{ h.cliente?.nombreCompleto }}</strong></div>
@@ -115,6 +115,7 @@
                 <tr>
                   <th>Orden</th>
                   <th>Fecha</th>
+                  <th>Cliente del servicio</th>
                   <th>Paquete</th>
                   <th>Mecanico</th>
                   <th>Km</th>
@@ -129,6 +130,7 @@
                   <tr>
                     <td><a class="mono" [routerLink]="['/ordenes', visita.informeId]">{{ visita.numeroOrden }}</a></td>
                     <td>{{ visita.fecha | date: 'dd/MM/yyyy' }}</td>
+                    <td>{{ visita.clienteNombre }}</td>
                     <td>{{ visita.paquete }}</td>
                     <td>{{ visita.mecanico }}</td>
                     <td class="money">{{ visita.kilometraje }} km</td>
@@ -139,14 +141,7 @@
                     </td>
                     <td>
                       @if (visita.fichaTecnicaPdfUrl) {
-                        <a
-                          class="btn btn-ghost btn-sm"
-                          [href]="taller.urlArchivo(visita.fichaTecnicaPdfUrl)"
-                          target="_blank"
-                          rel="noopener"
-                        >
-                          Ficha PDF
-                        </a>
+                        <button class="btn btn-ghost btn-sm" type="button" (click)="descargarFicha(visita.fichaTecnicaPdfUrl)">Ficha PDF</button>
                       }
                     </td>
                   </tr>
